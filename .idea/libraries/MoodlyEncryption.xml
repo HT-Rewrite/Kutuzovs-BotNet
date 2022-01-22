@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="MoodlyEncryption">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/Packets/lib/MoodlyEncryption.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

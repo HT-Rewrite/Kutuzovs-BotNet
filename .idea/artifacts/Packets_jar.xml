@@ -3,6 +3,7 @@
     <output-path>$PROJECT_DIR$/out/artifacts/Packets_jar</output-path>
     <root id="archive" name="Packets.jar">
       <element id="module-output" name="Packets" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Packets/lib/MoodlyEncryption.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

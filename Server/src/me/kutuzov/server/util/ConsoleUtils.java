@@ -21,4 +21,7 @@ public class ConsoleUtils {
     public static String readLine() { try { return new BufferedReader(new InputStreamReader(System.in)).readLine(); } catch (IOException exception) {} return ""; }
     public static void trySleep(long millis) { try { Thread.sleep(millis); } catch (InterruptedException ignored) {}}
     public static void pnl(String s) { System.out.println(s); }
+    public static void pwl(String s) { System.out.print(s); }
+
+    public static void asyncRun(Runnable runnable) { new Thread(runnable).start(); }
 }
