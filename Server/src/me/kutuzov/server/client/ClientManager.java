@@ -15,4 +15,18 @@ public class ClientManager {
 
         return client;
     }
+
+    public Client findClientByIdentifier(String identifier) {
+        for(Client client : clients.values())
+            if(client.getIdentifierName().contentEquals(identifier))
+                return client;
+        return null;
+    }
+
+    public Client findClient(String idorip) {
+        for(Client client : clients.values())
+            if(client.getIp().contentEquals(idorip))
+                return client;
+        return findClientByIdentifier(idorip);
+    }
 }

