@@ -6,12 +6,13 @@ import java.net.Socket;
 
 public class Client {
     private Socket socket;
-    private String ip, identifierName, os;
+    private String ip, identifierName, os, localIp;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     public Client(Socket socket) {
         this.socket = socket;
         this.ip = socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
+        this.localIp = "Unknown";
         this.identifierName = ip;
         this.os = "Unknown";
 
@@ -33,6 +34,9 @@ public class Client {
 
     public String getOs() { return os; }
     public void setOs(String os) { this.os = os; }
+
+    public String getLocalIp() { return localIp; }
+    public void setLocalIp(String localIp) { this.localIp = localIp; }
 
     public ObjectInputStream  getInput () { return ois; }
     public ObjectOutputStream getOutput() { return oos; }

