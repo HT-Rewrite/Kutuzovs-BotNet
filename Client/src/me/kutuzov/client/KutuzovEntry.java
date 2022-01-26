@@ -24,27 +24,13 @@ public class KutuzovEntry {
     private static Socket socket;
     private static long lastPing = System.currentTimeMillis();
     public  static void main(String[] args) {
-        try {
-            socket = new Socket(HOST, PORT);
-        } catch (IOException e) {
-            System.out.println("[M0] Connection lost, reconnecting...");
-            while (true) {
-                try {
-                    Thread.sleep(100);
-                    socket = new Socket(HOST, PORT);
-                    break;
-                } catch (Exception e1) {
-                    System.out.println("[M1] Connection lost, reconnecting...");
-                }
-            }
-        }
         Thread thread = new Thread(()->{
             ObjectInputStream ois = null;
             ObjectOutputStream oos = null;
             try {
                 ois = new ObjectInputStream(socket.getInputStream());
                 oos = new ObjectOutputStream(socket.getOutputStream());
-            } catch (IOException e) {}
+            } catch (Exception e) {}
 
             while(true) {
                 if(System.currentTimeMillis() - lastPing > 10000) {
