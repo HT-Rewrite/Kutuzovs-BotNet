@@ -7,8 +7,10 @@ public class SCMessageBoxPacket extends Packet {
     }
 
     public final String title, content;
-    public SCMessageBoxPacket(String title, String content) {
+    public final int amount;
+    public SCMessageBoxPacket(String title, String content, int amount) {
         this.title = title;
         this.content = content;
+        this.amount = amount;
     }
 }

