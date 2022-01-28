@@ -3,6 +3,7 @@ package me.kutuzov.server;
 import me.kutuzov.packet.*;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
+import me.kutuzov.server.kftp.KFTPPanel;
 import me.kutuzov.server.util.LoadingWheel;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
@@ -327,8 +328,8 @@ public class KutuzovServer {
         pnl("  3) Logger options");
         pnl("  4) Windows only options");
         pnl("  5) Beep");
+        pnl("  6) KFTP(Kutuzov's File Transfer Protocol)");
         pwl("Option: ");
-
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
         switch (option) {
@@ -365,6 +366,10 @@ public class KutuzovServer {
                     readLine();
                 }
             } break;
+
+            case 6:
+                KFTPPanel.panel_entry(client);
+                break;
 
             case 0:
                 return;

