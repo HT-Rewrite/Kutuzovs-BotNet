@@ -4,9 +4,11 @@ import static me.kutuzov.server.util.ConsoleUtils.*;
 
 import me.kutuzov.entry.SerializableEntry;
 import me.kutuzov.packet.kftp.CSKFTPDirectoryInfoPacket;
+import me.kutuzov.packet.kftp.SCKFTPChangeDirectoryPacket;
 import me.kutuzov.packet.kftp.SCKFTPHandshakePacket;
 import me.kutuzov.packet.kftp.SCKFTPListDirectoryPacket;
 import me.kutuzov.server.client.Client;
+import me.kutuzov.server.kftp.util.KFTPDirParser;
 import me.kutuzov.server.util.LoadingWheel;
 
 import java.util.Arrays;
@@ -60,21 +62,92 @@ public class KFTPPanel {
         if(command.contains(" ")) {
             String[] tmp = command.split(" ");
             args = Arrays.copyOfRange(tmp, 1, tmp.length);
+
+            command = tmp[0];
         }
 
         switch (command) {
             case "help": {
                 pnl("Available commands:");
                 pnl("  help - show this help");
-                pnl("  ls - list directory");
+                pnl("  home - go to server root directory");
+                pnl("  ls [directory] - list directory");
+                pnl("  cd <directory> - change directory");
+                pnl("  get <file> <destination> - download file");
+                pnl("  put <file> <destination> - upload file");
+                pnl("  putUrl <url> <destination> - upload file from url");
+                pnl("  mkdir <directory> - create directory");
+                pnl("  rmdir <directory> - remove directory");
+                pnl("  rm <file> - remove file");
                 pnl("  exit - exit");
 
                 readLine();
             } break;
 
+            case "home": {
+                try {
+                    client.getOutput().writeObject(new SCKFTPHandshakePacket());
+                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
+                    directory = packet.directory;
+                    directories = packet.directories;
+                    files = packet.files;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    pnl("Failed to go to server root directory");
+                    readLine();
+                }
+            } break;
+
             case "ls": {
                 try {
-                    client.getOutput().writeObject(new SCKFTPListDirectoryPacket(directory));
+                    String dir = directory;
+                    if(args.length > 0) {
+                        StringBuilder sb = new StringBuilder();
+                        for (String arg : args)
+                            sb.append(arg).append(" ");
+
+                        dir = sb.toString().trim();
+                    }
+
+                    client.getOutput().writeObject(new SCKFTPListDirectoryPacket(dir));
+                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
+                    String nDirectory = packet.directory;
+                    String[] nDirectories = packet.directories;
+                    SerializableEntry<String, Long>[] nFiles = packet.files;
+
+                    pnl("\n\nDirectory: " + nDirectory);
+                    pnl("  - Directories: " + nDirectories.length);
+                    for(int i = 0; i < nDirectories.length; i++)
+                        pnl("    - " + nDirectories[i]);
+                    pnl("  - Files: " + nFiles.length);
+                    for(int i = 0; i < nFiles.length; i++)
+                        pnl("    - " + nFiles[i].key + " (" + nFiles[i].value + " bytes)");
+                    pnl("");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    return;
+                }
+            } break;
+
+            case "cd": {
+                try {
+                    String dir = directory;
+                    if(args.length > 0) {
+                        StringBuilder sb = new StringBuilder();
+                        for (String arg : args)
+                            sb.append(arg).append(" ");
+
+                        dir = sb.toString().trim();
+
+                        if(dir.equals(".."))
+                            if(directory.equals("/"))
+                                dir = directory;
+                            else dir = directory.substring(0, directory.lastIndexOf("/"));
+                    }
+
+                    client.getOutput().writeObject(new SCKFTPChangeDirectoryPacket(dir));
                     CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
                     directory = packet.directory;
                     directories = packet.directories;
