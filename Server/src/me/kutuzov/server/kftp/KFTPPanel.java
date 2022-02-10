@@ -3,14 +3,12 @@ package me.kutuzov.server.kftp;
 import static me.kutuzov.server.util.ConsoleUtils.*;
 
 import me.kutuzov.entry.SerializableEntry;
-import me.kutuzov.packet.kftp.CSKFTPDirectoryInfoPacket;
-import me.kutuzov.packet.kftp.SCKFTPChangeDirectoryPacket;
-import me.kutuzov.packet.kftp.SCKFTPHandshakePacket;
-import me.kutuzov.packet.kftp.SCKFTPListDirectoryPacket;
+import me.kutuzov.packet.kftp.*;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.kftp.util.KFTPDirParser;
 import me.kutuzov.server.util.LoadingWheel;
 
+import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -127,7 +125,7 @@ public class KFTPPanel {
                 } catch (Exception e) {
                     pnl("Error: " + e.getMessage());
                     readLine();
-                    return;
+                    break;
                 }
             } break;
 
@@ -155,7 +153,40 @@ public class KFTPPanel {
                 } catch (Exception e) {
                     pnl("Error: " + e.getMessage());
                     readLine();
-                    return;
+                    break;
+                }
+            } break;
+
+            case "get": {
+                try {
+                    if(args.length < 2) {
+                        pnl("Error: missing arguments");
+                        readLine();
+                        break;
+                    }
+
+                    String file = args[0];
+                    String path = args[1];
+
+                    client.getOutput().writeObject(new SCKFTPDownloadFilePacket(file));
+                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.getInput().readObject();
+                    if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
+                        pnl("Error! Maybe the file doesn't exist or you don't have permission to access it");
+                        readLine();
+                        break;
+                    }
+
+                    CSKFTPFilePacket filePacket = (CSKFTPFilePacket) client.getInput().readObject();
+                    FileOutputStream fos = new FileOutputStream(path);
+                    fos.write(filePacket.data);
+                    fos.close();
+
+                    pnl("File downloaded successfully!");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    break;
                 }
             } break;
 

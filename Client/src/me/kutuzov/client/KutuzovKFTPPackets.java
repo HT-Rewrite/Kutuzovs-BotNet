@@ -2,10 +2,7 @@ package me.kutuzov.client;
 
 import me.kutuzov.entry.SerializableEntry;
 import me.kutuzov.packet.Packet;
-import me.kutuzov.packet.kftp.CSKFTPDirectoryInfoPacket;
-import me.kutuzov.packet.kftp.SCKFTPChangeDirectoryPacket;
-import me.kutuzov.packet.kftp.SCKFTPHandshakePacket;
-import me.kutuzov.packet.kftp.SCKFTPListDirectoryPacket;
+import me.kutuzov.packet.kftp.*;
 
 import java.io.File;
 import java.io.ObjectInputStream;
@@ -52,6 +49,24 @@ public class KutuzovKFTPPackets {
                 directory = changeDirectoryPacket.directory;
 
             sendList(ois, oos, directory);
+        } else if(packet instanceof SCKFTPDownloadFilePacket) {
+            SCKFTPDownloadFilePacket downloadFilePacket = (SCKFTPDownloadFilePacket) packet;
+            try {
+                File file = new File(directory, downloadFilePacket.fileName);
+                if(!file.exists() && file.isFile() && file.canRead()) {
+                    oos.writeObject(new CSKFTPResponsePacket(CSKFTPResponsePacket.RESPONSE_ERROR));
+                    return;
+                }
+
+                oos.writeObject(new CSKFTPResponsePacket(CSKFTPResponsePacket.RESPONSE_OK));
+
+                byte[] bytes = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
+                oos.writeObject(new CSKFTPFilePacket(file.getPath(), bytes));
+            } catch (Exception e) {
+                try {
+                    oos.writeObject(new CSKFTPFilePacket("", new byte[]{}));
+                } catch (Exception e1) { }
+            }
         }
     }
 }
