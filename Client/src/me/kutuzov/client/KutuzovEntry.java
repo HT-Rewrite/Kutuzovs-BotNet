@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class KutuzovEntry {
-    public  static final String HOST = "localhost";
+    public  static final String HOST = "172.18.110.115";
     public  static final int    PORT = 33901;
 
     private static Socket socket;

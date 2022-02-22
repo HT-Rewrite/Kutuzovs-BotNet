@@ -422,7 +422,7 @@ public class KutuzovServer {
                 break;
 
             case 7:
-
+                user_list_client_unix(client);
                 break;
 
             case 0:
