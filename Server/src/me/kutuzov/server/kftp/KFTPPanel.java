@@ -5,12 +5,12 @@ import static me.kutuzov.server.util.ConsoleUtils.*;
 import me.kutuzov.entry.SerializableEntry;
 import me.kutuzov.packet.kftp.*;
 import me.kutuzov.server.client.Client;
-import me.kutuzov.server.kftp.util.KFTPDirParser;
 import me.kutuzov.server.util.LoadingWheel;
 
 import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Map;
 
 public class KFTPPanel {
     private static final LoadingWheel loadingWheel = new LoadingWheel();
@@ -182,6 +182,122 @@ public class KFTPPanel {
                     fos.close();
 
                     pnl("File downloaded successfully!");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    break;
+                }
+            } break;
+
+            case "put": {
+                try {
+                    if(args.length < 2) {
+                        pnl("Error: missing arguments");
+                        readLine();
+                        break;
+                    }
+
+                    String file = args[0];
+                    String path = args[1];
+
+                    client.getOutput().writeObject(new SCKFTPStartUploadPacket(Files.size(Paths.get(file))));
+                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.getInput().readObject();
+                    if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
+                        pnl("Error! Maybe the file path is invalid or you don't have permission to access it");
+                        readLine();
+                        break;
+                    }
+
+                    SCKFTPFilePacket filePacket = new SCKFTPFilePacket(path, Files.readAllBytes(Paths.get(file)));
+                    client.getOutput().writeObject(filePacket);
+
+                    pnl("File uploaded successfully!");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    break;
+                }
+            } break;
+
+            case "putUrl": {
+                if(args.length < 2) {
+                    pnl("Error: missing arguments");
+                    readLine();
+                    break;
+                }
+
+                String url = args[0];
+                String path = args[1];
+
+                try {
+                    client.getOutput().writeObject(new SCKFTPUploadUrlPacket(url, path));
+
+                    pnl("File uploaded successfully!");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    break;
+                }
+            } break;
+
+            case "mkdir": {
+                if(args.length < 1) {
+                    pnl("Error: missing arguments");
+                    readLine();
+                    break;
+                }
+
+                String path = args[0];
+
+                try {
+                    client.getOutput().writeObject(new SCKFTPCreateDirectoryPacket(path));
+
+                    pnl("Directory created successfully!");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    break;
+                }
+            } break;
+
+            case "rmdir": {
+                if(args.length < 1) {
+                    pnl("Error: missing arguments");
+                    readLine();
+                    break;
+                }
+
+                String path = args[0];
+
+                try {
+                    client.getOutput().writeObject(new SCKFTPDeleteDirectoryPacket(path));
+
+                    pnl("Directory deleted successfully!");
+                    readLine();
+                } catch (Exception e) {
+                    pnl("Error: " + e.getMessage());
+                    readLine();
+                    break;
+                }
+            } break;
+
+            case "rm": {
+                if(args.length < 1) {
+                    pnl("Error: missing arguments");
+                    readLine();
+                    break;
+                }
+
+                String path = args[0];
+
+                try {
+                    client.getOutput().writeObject(new SCKFTPDeleteFilePacket(path));
+
+                    pnl("File deleted successfully!");
                     readLine();
                 } catch (Exception e) {
                     pnl("Error: " + e.getMessage());

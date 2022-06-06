@@ -1,8 +1,6 @@
 package me.kutuzov.client;
 
 import com.profesorfalken.jpowershell.OSDetector;
-import com.sun.jna.platform.win32.GDI32;
-import me.kutuzov.client.payloads.Payloads;
 import me.kutuzov.packet.*;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
@@ -14,11 +12,9 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class KutuzovEntry {
-    public  static final String HOST = "172.18.110.115";
+    public  static final String HOST = "localhost";
     public  static final int    PORT = 33901;
 
     private static Socket socket;
