@@ -121,6 +121,12 @@ public class KFTPPanel {
                     for(int i = 0; i < nFiles.length; i++)
                         pnl("    - " + nFiles[i].key + " (" + nFiles[i].value + " bytes)");
                     pnl("");
+
+                    if(args.length == 0) {
+                        directory = nDirectory;
+                        directories = nDirectories;
+                        files = nFiles;
+                    }
                     readLine();
                 } catch (Exception e) {
                     pnl("Error: " + e.getMessage());
