@@ -63,6 +63,7 @@ public class KutuzovServer {
                     client.setIdentifierName(handshakePacket.identifierName);
                     client.setOs(handshakePacket.os);
                     client.setLocalIp(handshakePacket.localIp);
+                    client.setVersion(handshakePacket.version);
                 } catch (IOException | ClassNotFoundException e) {
                     pnl("Could not request handshake from client(" + client.getIp() + ")!");
                 }
@@ -224,6 +225,7 @@ public class KutuzovServer {
 
     private void user_list_client_windows(Client client) {
         clearConsole();
+        pnl("CLIENT VERSION: " + client.getVersion());
         pnl("ID: " + client.getIdentifierName());
         pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
         pnl("OS: " + client.getOs());

@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class Client {
     private Socket socket;
-    private String ip, identifierName, os, localIp;
+    private String ip, identifierName, os, localIp, version;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     public Client(Socket socket) {
@@ -14,6 +14,7 @@ public class Client {
         this.ip = socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
         this.localIp = "Unknown";
         this.identifierName = ip;
+        this.version = "Unknown";
         this.os = "Unknown";
 
         try {
@@ -37,6 +38,9 @@ public class Client {
 
     public String getLocalIp() { return localIp; }
     public void setLocalIp(String localIp) { this.localIp = localIp; }
+
+    public String getVersion() { return version; }
+    public void setVersion(String version) { this.version = version; }
 
     public ObjectInputStream  getInput () { return ois; }
     public ObjectOutputStream getOutput() { return oos; }
