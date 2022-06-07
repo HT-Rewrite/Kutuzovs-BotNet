@@ -319,6 +319,7 @@ public class KutuzovServer {
 
     private void user_list_client_unix(Client client) {
         clearConsole();
+        pnl("CLIENT VERSION: " + client.getVersion());
         pnl("ID: " + client.getIdentifierName());
         pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
         pnl("OS: " + client.getOs());
@@ -368,6 +369,7 @@ public class KutuzovServer {
 
     private void user_list_client(Client client) {
         clearConsole();
+        pnl("CLIENT VERSION: " + client.getVersion());
         pnl("ID: " + client.getIdentifierName());
         pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
         pnl("OS: " + client.getOs());
