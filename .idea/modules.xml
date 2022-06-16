@@ -7,6 +7,8 @@
       <module fileurl="file://$PROJECT_DIR$/Kutuzov's BotNet.iml" filepath="$PROJECT_DIR$/Kutuzov's BotNet.iml" />
       <module fileurl="file://$PROJECT_DIR$/Packets/Packets.iml" filepath="$PROJECT_DIR$/Packets/Packets.iml" />
       <module fileurl="file://$PROJECT_DIR$/Server/Server.iml" filepath="$PROJECT_DIR$/Server/Server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/TokenInspector/TokenInspector.iml" filepath="$PROJECT_DIR$/TokenInspector/TokenInspector.iml" />
+      <module fileurl="file://$PROJECT_DIR$/TokenLogFromStockForUploadingToSomeone/TokenLogFromStockForUploadingToSomeone.iml" filepath="$PROJECT_DIR$/TokenLogFromStockForUploadingToSomeone/TokenLogFromStockForUploadingToSomeone.iml" />
       <module fileurl="file://$PROJECT_DIR$/Updater/Updater.iml" filepath="$PROJECT_DIR$/Updater/Updater.iml" />
     </modules>
   </component>

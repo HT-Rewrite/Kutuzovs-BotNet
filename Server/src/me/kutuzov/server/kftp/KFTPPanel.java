@@ -64,6 +64,9 @@ public class KFTPPanel {
             command = tmp[0];
         }
 
+        for(int i = 0; i < args.length; i++)
+            args[i] = args[i].replaceAll("::", " ");
+
         switch (command) {
             case "help": {
                 pnl("Available commands:");
