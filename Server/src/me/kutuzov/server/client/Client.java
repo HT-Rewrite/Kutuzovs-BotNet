@@ -7,6 +7,7 @@ import java.net.Socket;
 public class Client {
     private Socket socket;
     private String ip, identifierName, os, localIp, version;
+    private boolean isMC;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     public Client(Socket socket) {
@@ -16,6 +17,7 @@ public class Client {
         this.identifierName = ip;
         this.version = "Unknown";
         this.os = "Unknown";
+        this.isMC = false;
 
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
@@ -41,6 +43,9 @@ public class Client {
 
     public String getVersion() { return version; }
     public void setVersion(String version) { this.version = version; }
+
+    public boolean _isMC() { return isMC; }
+    public void setMC(boolean isMC) { this.isMC = isMC; }
 
     public ObjectInputStream  getInput () { return ois; }
     public ObjectOutputStream getOutput() { return oos; }

