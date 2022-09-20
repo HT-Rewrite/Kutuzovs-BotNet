@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/BukkitPluginTest/BukkitPluginTest.iml" filepath="$PROJECT_DIR$/BukkitPluginTest/BukkitPluginTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/Client/Client.iml" filepath="$PROJECT_DIR$/Client/Client.iml" />
       <module fileurl="file://$PROJECT_DIR$/Injector/Injector.iml" filepath="$PROJECT_DIR$/Injector/Injector.iml" />
       <module fileurl="file://$PROJECT_DIR$/Integrations/Integrations.iml" filepath="$PROJECT_DIR$/Integrations/Integrations.iml" />

@@ -1,0 +1,7 @@
+name: KutuzovTest
+main: me.pk2.bukkitplugintest.KutuzovsPlugin
+version: 1.0
+author: PK2_Stimpy
+commands:
+  kutuzovs:
+    usage: /kutuzovs

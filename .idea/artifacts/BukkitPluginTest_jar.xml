@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="BukkitPluginTest:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/BukkitPluginTest_jar</output-path>
+    <root id="archive" name="BukkitPluginTest.jar">
+      <element id="module-output" name="BukkitPluginTest" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/BukkitPluginTest/lib/paper-api-1.12.1-R0.1-20170803.154915-1.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
