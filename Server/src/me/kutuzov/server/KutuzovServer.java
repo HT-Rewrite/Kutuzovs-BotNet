@@ -427,6 +427,8 @@ public class KutuzovServer {
         pnl("  2) Send command as player");
         pnl("  3) Send message as player");
         pnl("  4) Get player ip");
+        pnl("  5) Install plugin");
+        pnl("  6) Toggle plugin");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
