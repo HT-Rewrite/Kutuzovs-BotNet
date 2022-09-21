@@ -429,8 +429,9 @@ public class KutuzovServer {
         pnl("  3) Send message as player");
         pnl("  4) Get player ip");
         pnl("  5) Show plugin list");
-        pnl("  6) Enable plugin jar");
-        pnl("  7) Toggle plugin");
+        pnl("  6) Load plugin jar");
+        pnl("  7) Enable plugin");
+        pnl("  8) Disable plugin");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
@@ -545,6 +546,48 @@ public class KutuzovServer {
                     String pluginString = String.join(", ", pluginList.plugins);
                     pnl("Plugins: " + pluginString);
                     readLine();
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
+
+            case 6: {
+                clearConsole();
+
+                pnl("Please input the desired plugin file:");
+                pwl("File: ");
+                String file = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitLoadPlugin(file));
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
+
+            case 7: {
+                clearConsole();
+
+                pnl("Please input the desired plugin name:");
+                pwl("Plugin: ");
+                String plugin = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitEnablePlugin(plugin));
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
+
+            case 8: {
+                clearConsole();
+
+                pnl("Please input the desired plugin name:");
+                pwl("Plugin: ");
+                String plugin = readLine();
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitDisablePlugin(plugin));
                 } catch (IOException exception) {
                     exception.printStackTrace();
                 }

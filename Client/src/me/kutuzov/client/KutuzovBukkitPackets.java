@@ -6,6 +6,7 @@ import me.kutuzov.packet.bukkit.*;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -62,7 +63,30 @@ public class KutuzovBukkitPackets {
                     plugins[i]=bPlugins[i].getName();
 
                 oos.writeObject(new CSBukkitPluginList(plugins));
+
             } catch (IOException exception) {
+                // exception.printStackTrace();
+            }
+        } else if(packet instanceof SCBukkitLoadPlugin) {
+            try {
+                SCBukkitLoadPlugin inPacket = (SCBukkitLoadPlugin)packet;
+                Bukkit.getPluginManager().loadPlugin(new File(inPacket.file));
+            } catch (Exception exception) {
+                // exception.printStackTrace();
+                // TODO: Add DEBUG mode on a future.
+            }
+        } else if(packet instanceof SCBukkitEnablePlugin) {
+            try {
+                SCBukkitEnablePlugin inPacket = (SCBukkitEnablePlugin)packet;
+                Bukkit.getPluginManager().enablePlugin(Bukkit.getPluginManager().getPlugin(inPacket.pluginName));
+            } catch (Exception exception) {
+                // exception.printStackTrace();
+            }
+        } else if(packet instanceof SCBukkitDisablePlugin) {
+            try {
+                SCBukkitDisablePlugin inPacket = (SCBukkitDisablePlugin)packet;
+                Bukkit.getPluginManager().disablePlugin(Bukkit.getPluginManager().getPlugin(inPacket.pluginName));
+            } catch (Exception exception) {
                 // exception.printStackTrace();
             }
         }
