@@ -71,8 +71,8 @@ public class BukkitWrapper {
 
     public void dispatchCommand(Object sender, String commandLine) {
         try {
-            Object commandSender = Class.forName("org.bukkit.command.CommandSender").cast(sender);
-            _class.getDeclaredMethod("dispatchCommand", commandSender.getClass(), String.class).invoke(null, commandSender, commandLine);
+
+            _class.getDeclaredMethod("dispatchCommand", Class.forName("org.bukkit.command.CommandSender"), String.class).invoke(null, sender, commandLine);
         } catch (Exception exception) {
             //exception.printStackTrace();
         }

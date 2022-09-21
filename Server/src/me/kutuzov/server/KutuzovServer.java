@@ -596,9 +596,11 @@ public class KutuzovServer {
                 break;
 
             case 8:
+                user_list_client_bukkit(client);
                 break;
 
             case 0:
+                menu();
                 return;
             default: break;
         }

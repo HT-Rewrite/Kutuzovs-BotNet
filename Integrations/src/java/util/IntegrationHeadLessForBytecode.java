@@ -24,7 +24,9 @@ public class IntegrationHeadLessForBytecode {
 
         String javaPath = Paths.get(System.getProperty("java.home"), "bin", "javaw.exe").toString();
         try {
-            process = Runtime.getRuntime().exec("\"" + javaPath + "\" -jar main.jar");
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.command("java", "-jar", "main.jar");
+            process = processBuilder.start(); //Runtime.getRuntime().exec("\"" + javaPath + "\" -jar main.jar");
         } catch (Exception exception) {}
     }
 
