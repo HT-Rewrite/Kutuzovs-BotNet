@@ -17,7 +17,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="paper-api-1.12.1-R0.1-20170803.154915-1" level="project" />
+    <orderEntry type="library" name="paper 1.12.2 bukkitp" level="project" />
     <orderEntry type="library" name="Client" level="project" />
   </component>
 </module>

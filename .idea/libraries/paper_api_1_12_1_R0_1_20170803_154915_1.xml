@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="paper-api-1.12.1-R0.1-20170803.154915-1">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/BukkitPluginTest/lib/paper-api-1.12.1-R0.1-20170803.154915-1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Client/lib/paper-api-1.12.1-R0.1-20170803.154915-1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

@@ -11,6 +11,7 @@ public class KutuzovsPlugin extends JavaPlugin {
     public void onEnable() {
         if(!bool1) {
             KutuzovEntry.main(new String[]{});
+            KutuzovEntry.setBukkitPlugin(this);
             bool1=true;
         }
 

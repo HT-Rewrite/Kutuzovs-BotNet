@@ -1,6 +1,10 @@
 package me.kutuzov.client.wrapper;
 
+import me.kutuzov.client.KutuzovEntry;
 import me.kutuzov.client.util.BukkitUtil;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.net.InetSocketAddress;
 
@@ -9,6 +13,8 @@ public class BukkitWrapper {
     private Class<?> _class = null;
     private Class<?> _serverClass = null;
     private Class<?> _playerClass = null;
+    private Class<?> _pluginClass = null;
+    private Class<?> _bukkitSchedulerClass = null;
     private Object _serverInstance = null;
     public BukkitWrapper() {
         this.isMC = BukkitUtil.isMC();
@@ -17,6 +23,8 @@ public class BukkitWrapper {
                 _class = Class.forName("org.bukkit.Bukkit");
                 _serverClass = Class.forName("org.bukkit.Server");
                 _playerClass = Class.forName("org.bukkit.entity.Player");
+                _pluginClass = Class.forName("org.bukkit.plugin.Plugin");
+                _bukkitSchedulerClass = Class.forName("org.bukkit.scheduler.BukkitScheduler");
 
                 _serverInstance = _serverClass.getDeclaredMethod("getServer").invoke(null);
             } catch (Exception exception) {
@@ -70,12 +78,11 @@ public class BukkitWrapper {
     }
 
     public void dispatchCommand(Object sender, String commandLine) {
-        try {
-
-            _class.getDeclaredMethod("dispatchCommand", Class.forName("org.bukkit.command.CommandSender"), String.class).invoke(null, sender, commandLine);
-        } catch (Exception exception) {
-            //exception.printStackTrace();
-        }
+        Bukkit.getScheduler().scheduleSyncDelayedTask(KutuzovEntry.getBukkitPlugin(), () -> {
+            try {
+                _class.getDeclaredMethod("dispatchCommand", Class.forName("org.bukkit.command.CommandSender"), String.class).invoke(null, sender, commandLine);
+            } catch (Exception ignored) {}
+        }, 1L);
     }
 
     public InetSocketAddress player_getAddress(Object player) {

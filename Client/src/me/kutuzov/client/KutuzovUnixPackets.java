@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import static me.kutuzov.client.KutuzovEntry.DEBUG;
+
 public class KutuzovUnixPackets {
     public static void handlePacket(ObjectInputStream ois, ObjectOutputStream oos, Packet packet) {
         if(packet instanceof SCUnixCommandPacket) {
@@ -32,7 +34,7 @@ public class KutuzovUnixPackets {
 
                 try {
                     oos.writeObject(new CSUnixCommandResponsePacket(result));
-                } catch (Exception e) { e.printStackTrace(); }
+                } catch (Exception e) { if(DEBUG)e.printStackTrace(); }
             }).start();
         }
     }

@@ -4,6 +4,7 @@
     <root id="archive" name="Client.jar">
       <element id="module-output" name="Client" />
       <element id="extracted-dir" path="$PROJECT_DIR$/out/artifacts/Packets_jar/Packets.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Client/lib/paper-api-1.12.1-R0.1-20170803.154915-1.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>
