@@ -49,4 +49,6 @@ public class Client {
 
     public ObjectInputStream  getInput () { return ois; }
     public ObjectOutputStream getOutput() { return oos; }
+    
+    // TODO: Don't receive packets if already receiving one.
 }
