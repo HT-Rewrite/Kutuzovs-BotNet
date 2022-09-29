@@ -23,8 +23,8 @@ public class KFTPPanel {
         loadingWheel.showing.set(true);
         CSKFTPDirectoryInfoPacket packet = null;
         try {
-            client.getOutput().writeObject(new SCKFTPHandshakePacket());
-            packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
+            client.sendPacket(new SCKFTPHandshakePacket());
+            packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
             directory = packet.directory;
             directories = packet.directories;
             files = packet.files;
@@ -87,8 +87,8 @@ public class KFTPPanel {
 
             case "home": {
                 try {
-                    client.getOutput().writeObject(new SCKFTPHandshakePacket());
-                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
+                    client.sendPacket(new SCKFTPHandshakePacket());
+                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
                     directory = packet.directory;
                     directories = packet.directories;
                     files = packet.files;
@@ -110,8 +110,8 @@ public class KFTPPanel {
                         dir = sb.toString().trim();
                     }
 
-                    client.getOutput().writeObject(new SCKFTPListDirectoryPacket(dir));
-                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
+                    client.sendPacket(new SCKFTPListDirectoryPacket(dir));
+                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
                     String nDirectory = packet.directory;
                     String[] nDirectories = packet.directories;
                     SerializableEntry<String, Long>[] nFiles = packet.files;
@@ -154,8 +154,8 @@ public class KFTPPanel {
                             else dir = directory.substring(0, directory.lastIndexOf("/"));
                     }
 
-                    client.getOutput().writeObject(new SCKFTPChangeDirectoryPacket(dir));
-                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.getInput().readObject();
+                    client.sendPacket(new SCKFTPChangeDirectoryPacket(dir));
+                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
                     directory = packet.directory;
                     directories = packet.directories;
                     files = packet.files;
@@ -177,15 +177,15 @@ public class KFTPPanel {
                     String file = args[0];
                     String path = args[1];
 
-                    client.getOutput().writeObject(new SCKFTPDownloadFilePacket(file));
-                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.getInput().readObject();
+                    client.sendPacket(new SCKFTPDownloadFilePacket(file));
+                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.readPacket();
                     if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
                         pnl("Error! Maybe the file doesn't exist or you don't have permission to access it");
                         readLine();
                         break;
                     }
 
-                    CSKFTPFilePacket filePacket = (CSKFTPFilePacket) client.getInput().readObject();
+                    CSKFTPFilePacket filePacket = (CSKFTPFilePacket) client.readPacket();
                     FileOutputStream fos = new FileOutputStream(path);
                     fos.write(filePacket.data);
                     fos.close();
@@ -210,8 +210,8 @@ public class KFTPPanel {
                     String file = args[0];
                     String path = args[1];
 
-                    client.getOutput().writeObject(new SCKFTPStartUploadPacket(Files.size(Paths.get(file))));
-                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.getInput().readObject();
+                    client.sendPacket(new SCKFTPStartUploadPacket(Files.size(Paths.get(file))));
+                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.readPacket();
                     if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
                         pnl("Error! Maybe the file path is invalid or you don't have permission to access it");
                         readLine();
@@ -219,7 +219,7 @@ public class KFTPPanel {
                     }
 
                     SCKFTPFilePacket filePacket = new SCKFTPFilePacket(path, Files.readAllBytes(Paths.get(file)));
-                    client.getOutput().writeObject(filePacket);
+                    client.sendPacket(filePacket);
 
                     pnl("File uploaded successfully!");
                     readLine();
@@ -241,7 +241,7 @@ public class KFTPPanel {
                 String path = args[1];
 
                 try {
-                    client.getOutput().writeObject(new SCKFTPUploadUrlPacket(url, path));
+                    client.sendPacket(new SCKFTPUploadUrlPacket(url, path));
 
                     pnl("File uploaded successfully!");
                     readLine();
@@ -262,7 +262,7 @@ public class KFTPPanel {
                 String path = args[0];
 
                 try {
-                    client.getOutput().writeObject(new SCKFTPCreateDirectoryPacket(path));
+                    client.sendPacket(new SCKFTPCreateDirectoryPacket(path));
 
                     pnl("Directory created successfully!");
                     readLine();
@@ -283,7 +283,7 @@ public class KFTPPanel {
                 String path = args[0];
 
                 try {
-                    client.getOutput().writeObject(new SCKFTPDeleteDirectoryPacket(path));
+                    client.sendPacket(new SCKFTPDeleteDirectoryPacket(path));
 
                     pnl("Directory deleted successfully!");
                     readLine();
@@ -304,7 +304,7 @@ public class KFTPPanel {
                 String path = args[0];
 
                 try {
-                    client.getOutput().writeObject(new SCKFTPDeleteFilePacket(path));
+                    client.sendPacket(new SCKFTPDeleteFilePacket(path));
 
                     pnl("File deleted successfully!");
                     readLine();

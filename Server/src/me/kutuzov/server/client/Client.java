@@ -1,8 +1,12 @@
 package me.kutuzov.server.client;
 
+import me.kutuzov.packet.Packet;
+
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
     private Socket socket;
@@ -10,6 +14,7 @@ public class Client {
     private boolean isMC;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
+    private AtomicBoolean reading;
     public Client(Socket socket) {
         this.socket = socket;
         this.ip = socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
@@ -18,6 +23,7 @@ public class Client {
         this.version = "Unknown";
         this.os = "Unknown";
         this.isMC = false;
+        this.reading = new AtomicBoolean(false);
 
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
@@ -27,8 +33,23 @@ public class Client {
         }
     }
 
-    public Socket getSocket() { return socket; }
+    public boolean isReading() { return reading.get(); }
+    public void setReading(boolean state) { reading.set(state); }
+
+    public Socket getConnection() { return socket; }
     public String getIp() { return ip; }
+
+    public void   sendPacket(Packet packet) throws IOException { getCOutput().writeObject(packet); }
+    public Packet readPacket() throws IOException, ClassNotFoundException {
+        while(isReading())
+            try { Thread.sleep(1); } catch (Exception exception) {}
+
+        setReading(true);
+        Packet packet = (Packet)getCInput().readObject();
+        setReading(false);
+
+        return packet;
+    }
 
     public String getFormattedIdentifierName() { return identifierName + " (" + ip + ")"; }
 
@@ -47,8 +68,6 @@ public class Client {
     public boolean _isMC() { return isMC; }
     public void setMC(boolean isMC) { this.isMC = isMC; }
 
-    public ObjectInputStream  getInput () { return ois; }
-    public ObjectOutputStream getOutput() { return oos; }
-    
-    // TODO: Don't receive packets if already receiving one.
+    public ObjectInputStream  getCInput () { return ois; }
+    public ObjectOutputStream getCOutput() { return oos; }
 }
