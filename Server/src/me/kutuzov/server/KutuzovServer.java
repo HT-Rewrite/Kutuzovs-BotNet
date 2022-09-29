@@ -26,6 +26,8 @@ import static me.kutuzov.server.KutuzovEnvironment.*;
 import static me.kutuzov.server.util.ConsoleUtils.*;
 
 public class KutuzovServer {
+    // TODO: Don't receive packets if already receiving one.
+    
     public final ClientManager clientManager;
     private final LoadingWheel loadingWheel;
     private ServerSocket serverSocket;
