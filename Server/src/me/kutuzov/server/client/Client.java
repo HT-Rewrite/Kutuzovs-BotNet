@@ -39,11 +39,12 @@ public class Client {
     public Socket getConnection() { return socket; }
     public String getIp() { return ip; }
 
-    public void   sendPacket(Packet packet) throws IOException { getCOutput().writeObject(packet); }
-    public Packet readPacket() throws IOException, ClassNotFoundException {
+    public void   sendPacket(Packet packet) throws IOException {
         while(isReading())
             try { Thread.sleep(1); } catch (Exception exception) {}
-
+        getCOutput().writeObject(packet);
+    }
+    public Packet readPacket() throws IOException, ClassNotFoundException {
         setReading(true);
         Packet packet = (Packet)getCInput().readObject();
         setReading(false);
