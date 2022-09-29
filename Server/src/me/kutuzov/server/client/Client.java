@@ -44,11 +44,14 @@ public class Client {
             try { Thread.sleep(1); } catch (Exception exception) {}
         getCOutput().writeObject(packet);
     }
-    public Packet readPacket() throws IOException, ClassNotFoundException {
-        setReading(true);
-        Packet packet = (Packet)getCInput().readObject();
-        setReading(false);
+    public Packet readPacket() {
+        Packet packet = null;
+        try {
+            setReading(true);
+            packet = (Packet) getCInput().readObject();
+        } catch (Exception exception) { exception.printStackTrace(); }
 
+        setReading(false);
         return packet;
     }
 
