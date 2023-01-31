@@ -4,6 +4,7 @@
     <root id="archive" name="Server.jar">
       <element id="module-output" name="Server" />
       <element id="extracted-dir" path="$PROJECT_DIR$/out/artifacts/Packets_jar/Packets.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/Server/lib/gson-2.8.2.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

@@ -1,5 +1,8 @@
 package me.kutuzov.server;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonReader;
 import me.kutuzov.packet.*;
 import me.kutuzov.packet.bukkit.*;
 import me.kutuzov.server.client.Client;
@@ -37,6 +40,38 @@ public class KutuzovServer {
     }
 
     public void boot() {
+        JsonObject config = new JsonObject();
+        config.addProperty("port", PORT);
+
+        File cfile = new File("config.json");
+        if(!cfile.exists()) {
+            PrintWriter pw = null;
+            try {
+                pw = new PrintWriter(cfile);
+                pw.write(config.toString());
+                pw.flush();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                if(pw != null)
+                    pw.close();
+            }
+        } else {
+            try {
+                BufferedReader br = new BufferedReader(new FileReader(cfile));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while((line = br.readLine()) != null) {
+                    sb.append(line);
+                }
+                br.close();
+                config = new Gson().fromJson(sb.toString(), JsonObject.class);
+                PORT = config.get("port").getAsInt();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         loadingWheel.status.set("Booting server...");
         loadingWheel.showing.set(true);
 
@@ -105,6 +140,8 @@ public class KutuzovServer {
                             return;
 
                         try {
+                            if(!entry.getValue().getConnection().isConnected())
+                                return;
                             entry.getValue().sendPacket(new SCAskWriterPacket());
                             CSWriterPacket wPacket = (CSWriterPacket)entry.getValue().readPacket();
 
@@ -116,7 +153,7 @@ public class KutuzovServer {
                             FileOutputStream writer = new FileOutputStream(file.getPath(), true);
                             writer.write((wPacket.text + "\r\n").getBytes(StandardCharsets.UTF_8));
                             writer.close();
-                        } catch (Exception e) {e.printStackTrace();}});
+                        } catch (Exception e) {}});
             }
         });
         writerLoop.start();
