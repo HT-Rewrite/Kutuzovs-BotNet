@@ -353,7 +353,8 @@ public class KutuzovServer {
                 pnl("Received token(s)<" + response.tokens.length + ">:");
                 for(int i = 0; i < response.tokens.length; i++)
                     pnl("  - " + response.tokens[i]);
-                pnl("Press 0 to continue.");
+                pnl("Press any key to continue.");
+                readLine();
             } break;
 
             case 0: return;
@@ -790,7 +791,7 @@ public class KutuzovServer {
                 break;
 
             case 3:
-
+                user_list_client_logger(client);
                 break;
 
             case 4:
