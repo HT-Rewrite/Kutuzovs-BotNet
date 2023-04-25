@@ -1,6 +1,7 @@
 package me.kutuzov.server.client;
 
 import me.kutuzov.packet.Packet;
+import me.kutuzov.server.util.ActionQueue;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -15,6 +16,7 @@ public class Client {
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     private AtomicBoolean reading;
+    private ActionQueue actionQueue;
     public Client(Socket socket) {
         this.socket = socket;
         this.ip = socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
@@ -24,6 +26,7 @@ public class Client {
         this.os = "Unknown";
         this.isMC = false;
         this.reading = new AtomicBoolean(false);
+        this.actionQueue = new ActionQueue();
 
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
@@ -31,6 +34,14 @@ public class Client {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void add(Runnable runnable) {
+        actionQueue.add(runnable);
+    }
+
+    public void addWait(Runnable action) {
+        actionQueue.addWait(action);
     }
 
     public boolean isReading() { return reading.get(); }

