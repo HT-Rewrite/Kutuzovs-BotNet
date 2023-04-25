@@ -99,7 +99,7 @@ public class KutuzovServer {
         }
 
         thread = new Thread(() -> {
-            //while(true) {
+            while(true) {
                 Socket clientSocket;
                 try {
                     clientSocket = serverSocket.accept();
@@ -120,7 +120,7 @@ public class KutuzovServer {
                     } catch (IOException e) {
                         pnl("Could not request handshake from client(" + client.getIp() + ")!");
                     }
-                });
+                }});
             //}
         thread.start();
 
