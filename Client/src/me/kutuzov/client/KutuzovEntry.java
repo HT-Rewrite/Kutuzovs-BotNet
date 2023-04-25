@@ -19,7 +19,7 @@ import java.util.Arrays;
 public class KutuzovEntry {
     public static final String HOST = "analytics018.antecedentium.xyz";
     public static final int    PORT = 33901;
-    public static final String VERSION = "b206";
+    public static final String VERSION = "b207";
     public static boolean DEBUG = false;
 
     public static ObjectInputStream ois = null;

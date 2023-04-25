@@ -116,6 +116,12 @@ public class KutuzovKFTPPackets {
             File file = new File(directory, deleteFilePacket.path);
             if(file.exists())
                 file.delete();
+        } else if(packet instanceof SCKFTPStateFilePacket) {
+            SCKFTPStateFilePacket stateFilePacket = (SCKFTPStateFilePacket) packet;
+            File file = new File(stateFilePacket.path);
+            try {
+                oos.writeObject(new CSKFTPStateFilePacket(stateFilePacket.path, file.exists() && file.isFile()));
+            } catch (Exception exception) {}
         }
     }
 }
