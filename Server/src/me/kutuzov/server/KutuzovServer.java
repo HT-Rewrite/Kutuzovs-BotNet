@@ -104,8 +104,8 @@ public class KutuzovServer {
                 try {
                     clientSocket = serverSocket.accept();
                 } catch (IOException exception) {
-                    exception.printStackTrace();
-                    return;
+                    pnl("Could not accept client! " + exception.getMessage());
+                    continue;
                 }
 
                     Client client = clientManager.newClient(clientSocket);
