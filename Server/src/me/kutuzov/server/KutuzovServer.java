@@ -103,13 +103,14 @@ public class KutuzovServer {
                 Socket clientSocket;
                 try {
                     clientSocket = serverSocket.accept();
-                } catch (IOException exception) {
-                    pnl("Could not accept client! " + exception.getMessage());
+                } catch (IOException ignored) {
+                    //pnl("Could not accept client! " + exception.getMessage());
                     continue;
                 }
 
-                    Client client = clientManager.newClient(clientSocket);
+                    Client client = null;
                     try {
+                        client = clientManager.newClient(clientSocket);
                         client.sendPacket(new SCRequireHandshakePacket());
                         CSHandshakePacket handshakePacket = (CSHandshakePacket)client.readPacket();
                         client.setIdentifierName(handshakePacket.identifierName);
@@ -117,9 +118,9 @@ public class KutuzovServer {
                         client.setLocalIp(handshakePacket.localIp);
                         client.setVersion(handshakePacket.version);
                         client.setMC(handshakePacket.isMC);
-                    } catch (IOException e) {
-                        pnl("Could not request handshake from client(" + client.getIp() + ")!");
-                    }
+                    /*} catch (IOException e) {
+                        pnl("Could not request handshake from client(" + client.getIp() + ")!");*/
+                    } catch (Exception ignored) {}
                 }});
             //}
         thread.start();
