@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
+    public boolean valid;
     private Socket socket;
     private String ip, identifierName, os, localIp, version;
     private boolean isMC;
@@ -31,8 +32,12 @@ public class Client {
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
             ois = new ObjectInputStream(socket.getInputStream());
+
+            valid = true;
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+
+            valid = false;
         }
     }
 

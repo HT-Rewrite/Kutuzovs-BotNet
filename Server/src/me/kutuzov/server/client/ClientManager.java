@@ -11,7 +11,8 @@ public class ClientManager {
 
     public Client newClient(Socket socket) {
         Client client = new Client(socket);
-        clients.put(client.getIp(), client);
+        if(client.valid)
+            clients.put(client.getIp(), client);
 
         return client;
     }

