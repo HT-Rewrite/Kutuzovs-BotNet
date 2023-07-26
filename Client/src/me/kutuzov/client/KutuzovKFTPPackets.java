@@ -88,12 +88,14 @@ public class KutuzovKFTPPackets {
                 fos.write(filePacket.data);
                 fos.close();
             } catch (Exception e) { }
+
+            sendList(ois, oos, directory);
         } else if(packet instanceof SCKFTPUploadUrlPacket) {
             SCKFTPUploadUrlPacket uploadUrlPacket = (SCKFTPUploadUrlPacket) packet;
             try {
                 URL url = new URL(uploadUrlPacket.url);
                 URLConnection connection = url.openConnection();
-                connection.addRequestProperty("User-Agent", "Mozilla");
+                connection.addRequestProperty("User-Agent", "Mozilla/5.0");
                 connection.setConnectTimeout(20000);
                 connection.setReadTimeout(120000);
 
@@ -101,21 +103,29 @@ public class KutuzovKFTPPackets {
                 Files.copy(is, Paths.get(directory, uploadUrlPacket.path), StandardCopyOption.REPLACE_EXISTING);
                 is.close();
             } catch (Exception e) { }
+
+            sendList(ois, oos, directory);
         } else if(packet instanceof SCKFTPCreateDirectoryPacket) {
             SCKFTPCreateDirectoryPacket createDirectoryPacket = (SCKFTPCreateDirectoryPacket) packet;
             File file = new File(directory, createDirectoryPacket.directory);
             if(!file.exists())
                 file.mkdir();
+
+            sendList(ois, oos, directory);
         } else if(packet instanceof SCKFTPDeleteDirectoryPacket) {
             SCKFTPDeleteDirectoryPacket deleteDirectoryPacket = (SCKFTPDeleteDirectoryPacket) packet;
             File file = new File(directory, deleteDirectoryPacket.path);
             if(file.exists())
                 deleteDir(file);
+
+            sendList(ois, oos, directory);
         } else if(packet instanceof SCKFTPDeleteFilePacket) {
             SCKFTPDeleteFilePacket deleteFilePacket = (SCKFTPDeleteFilePacket) packet;
             File file = new File(directory, deleteFilePacket.path);
             if(file.exists())
                 file.delete();
+
+            sendList(ois, oos, directory);
         } else if(packet instanceof SCKFTPStateFilePacket) {
             SCKFTPStateFilePacket stateFilePacket = (SCKFTPStateFilePacket) packet;
             File file = new File(stateFilePacket.path);

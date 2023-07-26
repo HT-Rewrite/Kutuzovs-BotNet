@@ -3,7 +3,7 @@
     <output-path>$PROJECT_DIR$/out/artifacts/BukkitPluginTest_jar</output-path>
     <root id="archive" name="BukkitPluginTest.jar">
       <element id="module-output" name="BukkitPluginTest" />
-      <element id="extracted-dir" path="$PROJECT_DIR$/out/artifacts/Client_jar/client.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/out/artifacts/Client_jar/Client.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

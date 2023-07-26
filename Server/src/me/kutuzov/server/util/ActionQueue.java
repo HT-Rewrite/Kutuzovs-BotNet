@@ -37,4 +37,8 @@ public class ActionQueue {
             ex.printStackTrace();
         }
     }
+
+    public BlockingQueue<Runnable> getQueue() {
+        return queue;
+    }
 }

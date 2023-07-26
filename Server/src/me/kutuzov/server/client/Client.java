@@ -1,6 +1,7 @@
 package me.kutuzov.server.client;
 
 import me.kutuzov.packet.Packet;
+import me.kutuzov.server.KutuzovEntry;
 import me.kutuzov.server.util.ActionQueue;
 
 import java.io.IOException;
@@ -8,16 +9,18 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Client {
     public boolean valid;
+    public AtomicLong lastMS;
     private Socket socket;
     private String ip, identifierName, os, localIp, version;
     private boolean isMC;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     private AtomicBoolean reading;
-    private ActionQueue actionQueue;
+    public ActionQueue actionQueue;
     public Client(Socket socket) {
         this.socket = socket;
         this.ip = socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
@@ -26,6 +29,7 @@ public class Client {
         this.version = "Unknown";
         this.os = "Unknown";
         this.isMC = false;
+        this.lastMS = new AtomicLong(System.currentTimeMillis());
         this.reading = new AtomicBoolean(false);
         this.actionQueue = new ActionQueue();
 
@@ -49,15 +53,13 @@ public class Client {
         actionQueue.addWait(action);
     }
 
-    public boolean isReading() { return reading.get(); }
+    public boolean isReading() { return false; }
     public void setReading(boolean state) { reading.set(state); }
 
     public Socket getConnection() { return socket; }
     public String getIp() { return ip; }
 
     public void   sendPacket(Packet packet) throws IOException {
-        while(isReading())
-            try { Thread.sleep(1); } catch (Exception exception) {}
         getCOutput().writeObject(packet);
     }
     public Packet readPacket() {
@@ -65,7 +67,13 @@ public class Client {
         try {
             setReading(true);
             packet = (Packet) getCInput().readObject();
-        } catch (Exception exception) { exception.printStackTrace(); }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+            if(!getConnection().isClosed())
+                try { getConnection().close(); } catch (Exception e) {}
+            KutuzovEntry.SERVER.clientManager.clients.remove(ip);
+            KutuzovEntry.SERVER.pythonClientManager.clients.remove(ip);
+        }
 
         setReading(false);
         return packet;

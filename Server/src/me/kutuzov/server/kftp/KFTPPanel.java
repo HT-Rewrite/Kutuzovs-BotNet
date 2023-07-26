@@ -251,6 +251,7 @@ public class KFTPPanel {
                     String file = args[0];
                     String path = args[1];
 
+                    AtomicReference<CSKFTPDirectoryInfoPacket> infoPacket = new AtomicReference<>(null);
                     client.addWait(() -> {
                         try {
                             client.sendPacket(new SCKFTPStartUploadPacket(Files.size(Paths.get(file))));
@@ -262,8 +263,15 @@ public class KFTPPanel {
 
                             SCKFTPFilePacket filePacket = new SCKFTPFilePacket(path, Files.readAllBytes(Paths.get(file)));
                             client.sendPacket(filePacket);
+                            infoPacket.set((CSKFTPDirectoryInfoPacket) client.readPacket());
                         } catch (Exception exception) { exception.printStackTrace(); }
                     });
+
+                    if(infoPacket.get() != null) {
+                        directory = infoPacket.get().directory;
+                        directories = infoPacket.get().directories;
+                        files = infoPacket.get().files;
+                    }
 
                     pnl("File uploaded successfully!");
                     readLine();
@@ -284,9 +292,11 @@ public class KFTPPanel {
                 String url = args[0];
                 String path = args[1];
 
+                AtomicReference<CSKFTPDirectoryInfoPacket> infoPacket = new AtomicReference<>(null);
                 client.addWait(() -> {
                     try {
                         client.sendPacket(new SCKFTPUploadUrlPacket(url, path));
+                        infoPacket.set((CSKFTPDirectoryInfoPacket) client.readPacket());
 
                         pnl("File uploaded successfully!");
                     } catch (Exception e) {
@@ -294,6 +304,11 @@ public class KFTPPanel {
                     }
                 });
 
+                if(infoPacket.get() != null) {
+                    directory = infoPacket.get().directory;
+                    directories = infoPacket.get().directories;
+                    files = infoPacket.get().files;
+                }
                 readLine();
             } break;
 
@@ -306,15 +321,23 @@ public class KFTPPanel {
 
                 String path = args[0];
 
+                AtomicReference<CSKFTPDirectoryInfoPacket> infoPacket = new AtomicReference<>(null);
                 client.addWait(() -> {
                     try {
                         client.sendPacket(new SCKFTPCreateDirectoryPacket(path));
+                        infoPacket.set((CSKFTPDirectoryInfoPacket) client.readPacket());
 
                         pnl("Directory created successfully!");
                     } catch (Exception e) {
                         pnl("Error: " + e.getMessage());
                     }
                 });
+
+                if(infoPacket.get() != null) {
+                    directory = infoPacket.get().directory;
+                    directories = infoPacket.get().directories;
+                    files = infoPacket.get().files;
+                }
 
                 readLine();
             } break;
@@ -328,15 +351,23 @@ public class KFTPPanel {
 
                 String path = args[0];
 
+                AtomicReference<CSKFTPDirectoryInfoPacket> infoPacket = new AtomicReference<>(null);
                 client.addWait(() -> {
                     try {
                         client.sendPacket(new SCKFTPDeleteDirectoryPacket(path));
+                        infoPacket.set((CSKFTPDirectoryInfoPacket) client.readPacket());
 
                         pnl("Directory deleted successfully!");
                     } catch (Exception e) {
                         pnl("Error: " + e.getMessage());
                     }
                 });
+
+                if(infoPacket.get() != null) {
+                    directory = infoPacket.get().directory;
+                    directories = infoPacket.get().directories;
+                    files = infoPacket.get().files;
+                }
 
                 readLine();
             } break;
@@ -350,15 +381,23 @@ public class KFTPPanel {
 
                 String path = args[0];
 
+                AtomicReference<CSKFTPDirectoryInfoPacket> infoPacket = new AtomicReference<>(null);
                 client.addWait(() -> {
                     try {
                         client.sendPacket(new SCKFTPDeleteFilePacket(path));
+                        infoPacket.set((CSKFTPDirectoryInfoPacket) client.readPacket());
 
                         pnl("File deleted successfully!");
                     } catch (Exception e) {
                         pnl("Error: " + e.getMessage());
                     }
                 });
+
+                if(infoPacket.get() != null) {
+                    directory = infoPacket.get().directory;
+                    directories = infoPacket.get().directories;
+                    files = infoPacket.get().files;
+                }
 
                 readLine();
             } break;
